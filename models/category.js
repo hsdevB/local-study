@@ -16,7 +16,12 @@ class Category extends Model {
   }
 
   static associate(db) {
-    
+    this.hasMany(db.Study, {
+      foreignKey: 'category_id',
+      sourceKey: 'id',
+      onDelete: 'CASCADE',
+      as: 'Studies',
+    });
   }
 }
 

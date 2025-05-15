@@ -1,4 +1,3 @@
-// /utils/parseAddress.js
 import fs from 'fs';
 import path from 'path';
 import iconv from 'iconv-lite';
@@ -58,18 +57,3 @@ export default function parseAddressTxtFilesAsNestedMap(dirPath) {
   return result;
 }
 
-// --------------------------
-// 단독 실행 시 테스트
-// --------------------------
-// if (require.main === module) {
-//   const result = parseAddressTxtFilesAsNestedMap('public/data');
-//   // console.log(JSON.stringify(result, null, 2));
-
-//   // 결과를 JSON 형태로 변환하여 텍스트 파일로 저장
-//   const filePath = path.join(__dirname, '.', 'result.txt'); // 결과를 저장할 파일 경로
-//   const jsonResult = JSON.stringify(result, null, 2);  // JSON 포맷으로 변환
-  
-//   // 파일에 결과 저장
-//   fs.writeFileSync(filePath, jsonResult, 'utf8');
-//   console.log(`Results have been written to ${filePath}`);
-// }

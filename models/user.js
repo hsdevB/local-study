@@ -43,7 +43,18 @@ class User extends Model {
 
   static associate(db) {
     // User 모델과 Product 모델 간의 N:M 관계 설정 (찜하기)
-    
+    this.hasMany(db.Study, {
+      foreignKey: 'user_id',
+      sourceKey: 'id',
+      onDelete: 'CASCADE',
+      as: 'Studies',
+    });
+    this.hasMany(db.StudyApplication, {
+      foreignKey: 'user_id',
+      sourceKey: 'id',
+      onDelete: 'CASCADE',
+      as: 'StudyApplications',
+    });
   }
 }
 

@@ -22,6 +22,12 @@ class City extends Model {
       onDelete: 'CASCADE',
       as: 'Districts',
     });
+    this.hasMany(db.Study, {
+      foreignKey: 'city_id',
+      sourceKey: 'id',
+      onDelete: 'CASCADE',
+      as: 'Studies',
+    });
   }
 }
 

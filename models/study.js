@@ -39,8 +39,36 @@ class Study extends Model {
   }
 
   static associate(db) {
-    // User 모델과 Product 모델 간의 N:M 관계 설정 (찜하기)
-    
+    this.belongsTo(db.Category, {
+      foreignKey: 'category_id',
+      targetKey: 'id',
+      onDelete: 'CASCADE',
+      as: 'Category',
+    });
+    this.belongsTo(db.City, {
+      foreignKey: 'city_id',
+      targetKey: 'id',
+      onDelete: 'CASCADE',
+      as: 'City',
+    });
+    this.belongsTo(db.User, {
+      foreignKey: 'user_id',
+      targetKey: 'id',
+      onDelete: 'CASCADE',
+      as: 'User',
+    });
+    this.hasMany(db.StudyApplication, {
+      foreignKey: 'study_id',
+      sourceKey: 'id',
+      onDelete: 'CASCADE',
+      as: 'StudyApplications',
+    });
+    this.hasMany(db.StudyThumbnail, {
+      foreignKey: 'study_id',
+      sourceKey: 'id',
+      onDelete: 'CASCADE',
+      as: 'StudyThumbnails',
+    });
   }
 }
 

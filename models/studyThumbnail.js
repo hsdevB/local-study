@@ -25,7 +25,12 @@ class StudyThumbnail extends Model {
   }
 
   static associate(db) {
-    
+    this.belongsTo(db.Study, {
+      foreignKey: 'study_id',
+      targetKey: 'id',
+      onDelete: 'CASCADE',
+      as: 'Study',
+    });
   }
 }
 

@@ -2,7 +2,7 @@
 import City from '../models/city.js';
 import District from '../models/district.js';
 import Town from '../models/town.js';
-import parseAddressTxtFilesAsNestedMap from '../utils/parseAddress.js'; // 수정된 주소 파싱 함수
+import parseAddressTxtFilesAsNestedMap from '../utils/parseAddress.js';
 import logger from '../utils/logger.js';
 
 // 초기 데이터 삽입 함수
