@@ -3,7 +3,8 @@ import express from 'express';
 import path from 'path';
 import cookieParser from 'cookie-parser';
 import logger from './utils/logger.js';
-import {initializeDatabase} from './dao/initialize.js';
+import {initializeAddressData} from './dao/initializeAddressData.js';
+import {initializeCategory} from './dao/initializeCategory.js';
 import models from './models/index.js';
 import cors from 'cors';
 import corsConfig from './config/corsConfig.json' with { type: 'json' };
@@ -41,7 +42,8 @@ models.sequelize
       .then(() => {
         logger.info("Sequelize sync success");
         // 테이블 생성 후 초기 데이터 삽입
-        initializeDatabase();
+        initializeAddressData();
+        initializeCategory();
       })
       .catch((err) => {
         logger.error("Sequelize sync error", err);

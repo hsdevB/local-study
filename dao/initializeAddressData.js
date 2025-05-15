@@ -1,4 +1,3 @@
-// /dao/initialize.js
 import City from '../models/city.js';
 import District from '../models/district.js';
 import Town from '../models/town.js';
@@ -6,7 +5,7 @@ import parseAddressTxtFilesAsNestedMap from '../utils/parseAddress.js';
 import logger from '../utils/logger.js';
 
 // 초기 데이터 삽입 함수
-export async function initializeDatabase() {
+export async function initializeAddressData() {
   try {
     // 테이블에 데이터가 있는지 확인
     const cityCount = await City.count();
