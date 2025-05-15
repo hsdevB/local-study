@@ -16,7 +16,12 @@ class Town extends Model {
   }
 
   static associate(db) {
-    
+    this.belongsTo(db.District, {
+      foreignKey: 'district_id',
+      targetKey: 'id',
+      onDelete: 'CASCADE',
+      as: 'District',
+    });
   }
 }
 

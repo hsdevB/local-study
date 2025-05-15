@@ -3,7 +3,7 @@ import express from 'express';
 import path from 'path';
 import cookieParser from 'cookie-parser';
 import logger from './utils/logger.js';
-import initializeDatabase from './dao/initialize.js';
+import {initializeDatabase} from './dao/initialize.js';
 import models from './models/index.js';
 import cors from 'cors';
 import corsConfig from './config/corsConfig.json' with { type: 'json' };
@@ -13,12 +13,6 @@ import usersRouter from './routes/users.js';
 
 const app = express();
 logger.info("Starting the application...");
-// 초기 데이터 삽입
-initializeDatabase().then(() => {
-  console.log("Initial data inserted successfully.");
-}).catch(err => {
-  console.error("Error during initialization:", err);
-});
 
 // view engine setup
 const __dirname = path.resolve();
@@ -35,6 +29,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
+// 데이터베이스 연결 및 테이블 생성 후 초기 데이터 삽입
 models.sequelize
   .authenticate()
   .then(() => {
@@ -45,6 +40,8 @@ models.sequelize
       .sync({ alter: true })
       .then(() => {
         logger.info("Sequelize sync success");
+        // 테이블 생성 후 초기 데이터 삽입
+        initializeDatabase();
       })
       .catch((err) => {
         logger.error("Sequelize sync error", err);

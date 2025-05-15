@@ -16,7 +16,12 @@ class City extends Model {
   }
 
   static associate(db) {
-    
+    this.hasMany(db.District, {
+      foreignKey: 'city_id',
+      sourceKey: 'id',
+      onDelete: 'CASCADE',
+      as: 'Districts',
+    });
   }
 }
 

@@ -9,7 +9,7 @@ dotenv.config();
 const loggerLevel = process.env.LOGGER_LEVEL || "info";
 
 // const { env } = envConfig;
-const logDir = "log";
+const logDir = "logs";
 
 // Log only if info.level less than or equal to this level
 // { error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }

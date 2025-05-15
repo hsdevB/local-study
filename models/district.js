@@ -16,7 +16,18 @@ class District extends Model {
   }
 
   static associate(db) {
-    
+    this.belongsTo(db.City, {
+      foreignKey: 'city_id',
+      targetKey: 'id',
+      onDelete: 'CASCADE',
+      as: 'City',
+    });
+    this.hasMany(db.Town, {
+      foreignKey: 'district_id',
+      sourceKey: 'id',
+      onDelete: 'CASCADE',
+      as: 'Towns',
+    });
   }
 }
 

@@ -7,8 +7,9 @@ import iconv from 'iconv-lite';
  * 텍스트 파일들을 파싱하여
  * 시/도 → 구/군 → 읍면동 구조로 정리된 객체 반환
  */
-function parseAddressTxtFilesAsNestedMap(dirPath) {
-  const fullDirPath = path.join(__dirname, '..', dirPath);
+export default function parseAddressTxtFilesAsNestedMap(dirPath) {
+  const __dirname = path.resolve();
+  const fullDirPath = path.join(__dirname, '.', dirPath);
   const files = fs.readdirSync(fullDirPath);
 
   const map = {};
@@ -56,10 +57,6 @@ function parseAddressTxtFilesAsNestedMap(dirPath) {
 
   return result;
 }
-
-export default {
-  parseAddressTxtFilesAsNestedMap,
-};
 
 // --------------------------
 // 단독 실행 시 테스트
