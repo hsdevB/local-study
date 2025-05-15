@@ -1,5 +1,5 @@
-const Sequelize = require("sequelize");
-const dotenv = require("dotenv");
+import Sequelize from "sequelize";
+import dotenv from "dotenv";
 
 dotenv.config();
 
@@ -19,4 +19,4 @@ const sequelize = new Sequelize(db.database, db.username, db.password, {
   dialect: db.dialect,
 });
 
-exports.sequelize = sequelize;
+export default sequelize;

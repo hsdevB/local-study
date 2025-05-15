@@ -1,15 +1,15 @@
-const createError = require('http-errors');
-const express = require('express');
-const path = require('path');
-const cookieParser = require('cookie-parser');
-const logger = require('./utils/logger');
-const { initializeDatabase } = require('./dao/initialize');
-const models = require('./models');
-const cors = require('cors');
-const corsConfig = require('./config/corsConfig');
+import createError from 'http-errors';
+import express from 'express';
+import path from 'path';
+import cookieParser from 'cookie-parser';
+import logger from './utils/logger.js';
+import initializeDatabase from './dao/initialize.js';
+import models from './models/index.js';
+import cors from 'cors';
+import corsConfig from './config/corsConfig.json' with { type: 'json' };
 
-const indexRouter = require('./routes/index');
-const usersRouter = require('./routes/users');
+import indexRouter from './routes/index.js';
+import usersRouter from './routes/users.js';
 
 const app = express();
 logger.info("Starting the application...");
@@ -21,6 +21,7 @@ initializeDatabase().then(() => {
 });
 
 // view engine setup
+const __dirname = path.resolve();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
@@ -69,4 +70,4 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
-module.exports = app;
+export default app;

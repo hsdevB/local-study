@@ -1,6 +1,8 @@
 // /dao/initialize.js
-const { City, District, Town } = require('../models');
-const { parseAddressTxtFilesAsNestedMap } = require('../utils/parseAddress'); // 수정된 주소 파싱 함수
+import City from '../models/city.js';
+import District from '../models/district.js';
+import Town from '../models/town.js';
+import parseAddressTxtFilesAsNestedMap from '../utils/parseAddress.js'; // 수정된 주소 파싱 함수
 
 // 초기 데이터 삽입 함수
 async function initializeDatabase() {
@@ -39,4 +41,4 @@ async function initializeDatabase() {
   }
 }
 
-module.exports = { initializeDatabase };
+export default initializeDatabase;
