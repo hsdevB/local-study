@@ -1,11 +1,11 @@
 import express from 'express';
-import townService from '../services/townService.js';
+import townService from '../service/townService.js';
 import logger from '../utils/logger.js';
 
-const router = express.Router();
+const townRouter = express.Router();
 
 // GET /towns/:districtId
-router.get('/:districtId', async (req, res) => {
+townRouter.get('/:districtId', async (req, res) => {
   const { districtId } = req.params;
   try {
     const towns = await townService.fetchTownsByDistrictId(districtId);
@@ -16,4 +16,4 @@ router.get('/:districtId', async (req, res) => {
   }
 });
 
-export default router;
+export default townRouter;

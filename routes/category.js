@@ -1,13 +1,13 @@
 import express from 'express';
-import { fetchAllCategories } from '../services/categoryService.js';
+import categoryService from '../service/categoryService.js';
 import logger from '../utils/logger.js';
 
-const router = express.Router();
+const categoryRouter = express.Router();
 
 // GET /categories
-router.get('/', async (req, res) => {
+categoryRouter.get('/', async (req, res) => {
   try {
-    const categories = await fetchAllCategories();
+    const categories = await categoryService.getAllCategories();
     res.status(200).json(categories);
   } catch (err) {
     logger.error('Error fetching categories:', err);
@@ -15,4 +15,4 @@ router.get('/', async (req, res) => {
   }
 });
 
-export default router;
+export default categoryRouter;

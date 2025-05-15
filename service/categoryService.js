@@ -1,10 +1,10 @@
-import { getAllCategories } from '../dao/categoryDao.js';
+import categoryDao from '../dao/categoryDao.js';
 import logger from '../utils/logger.js';
 
 const categoryService = {
     getAllCategories: async () => {
         try {
-            const categories = await getAllCategories();
+            const categories = await categoryDao.getAllCategories();
             return categories.map(category => ({
                 id: category.id,
                 name: category.name,

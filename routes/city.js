@@ -1,11 +1,11 @@
 import express from 'express';
-import cityService from '../services/cityService.js';
+import cityService from '../service/cityService.js';
 import logger from '../utils/logger.js';
 
-const router = express.Router();
+const cityRouter = express.Router();
 
 // GET /cities
-router.get('/', async (req, res) => {
+cityRouter.get('/', async (req, res) => {
   try {
     const cities = await cityService.fetchAllCities();
     res.status(200).json(cities);
@@ -15,4 +15,4 @@ router.get('/', async (req, res) => {
   }
 });
 
-export default router;
+export default cityRouter;
