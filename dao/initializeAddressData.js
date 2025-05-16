@@ -3,6 +3,7 @@ import District from '../models/district.js';
 import Town from '../models/town.js';
 import parseAddressTxtFilesAsNestedMap from '../utils/parseAddress.js';
 import logger from '../utils/logger.js';
+import { AppError } from '../utils/errorHandler.js';
 
 // 초기 데이터 삽입 함수
 export async function initializeAddressData() {
@@ -14,37 +15,85 @@ export async function initializeAddressData() {
 
     // 데이터가 이미 있으면 초기화 건너뛰기
     if (cityCount > 0 && districtCount > 0 && townCount > 0) {
-      logger.info("데이터가 이미 존재합니다. 초기화를 건너뜁니다.");
+      logger.info('(initializeAddressData)', {
+        message: '데이터가 이미 존재합니다. 초기화를 건너뜁니다.',
+        counts: { cityCount, districtCount, townCount }
+      });
       return;
     }
 
-    const addressMap = parseAddressTxtFilesAsNestedMap('public/data'); // 텍스트 파일을 파싱하여 시/도 → 구/군 → 읍/면/동 구조 얻기
+    const addressMap = parseAddressTxtFilesAsNestedMap('public/data');
+    let insertedCityCount = 0;
+    let insertedDistrictCount = 0;
+    let insertedTownCount = 0;
 
     for (const cityName in addressMap) {
-      // 시/도 데이터 삽입
-      const city = await City.create({ name: cityName });
+      try {
+        // 시/도 데이터 삽입
+        const city = await City.create({ name: cityName });
+        insertedCityCount++;
 
-      const districts = addressMap[cityName];
-      for (const districtName in districts) {
-        // 구/군 데이터 삽입
-        const district = await District.create({
-          name: districtName,
-          city_id: city.id,
-        });
+        const districts = addressMap[cityName];
+        for (const districtName in districts) {
+          try {
+            // 구/군 데이터 삽입
+            const district = await District.create({
+              name: districtName,
+              city_id: city.id,
+            });
+            insertedDistrictCount++;
 
-        const towns = districts[districtName];
-        for (const townName of towns) {
-          // 읍/면/동 데이터 삽입
-          await Town.create({
-            name: townName,
-            district_id: district.id,
-          });
+            const towns = districts[districtName];
+            for (const townName of towns) {
+              try {
+                // 읍/면/동 데이터 삽입
+                await Town.create({
+                  name: townName,
+                  district_id: district.id,
+                });
+                insertedTownCount++;
+              } catch (err) {
+                logger.error('(initializeAddressData)', {
+                  error: err.toString(),
+                  type: 'town',
+                  name: townName,
+                  district: districtName
+                });
+                throw new AppError(`읍/면/동 "${townName}" 초기화 중 오류가 발생했습니다.`, 500);
+              }
+            }
+          } catch (err) {
+            logger.error('(initializeAddressData)', {
+              error: err.toString(),
+              type: 'district',
+              name: districtName,
+              city: cityName
+            });
+            throw new AppError(`시/군/구 "${districtName}" 초기화 중 오류가 발생했습니다.`, 500);
+          }
         }
+      } catch (err) {
+        logger.error('(initializeAddressData)', {
+          error: err.toString(),
+          type: 'city',
+          name: cityName
+        });
+        throw new AppError(`시/도 "${cityName}" 초기화 중 오류가 발생했습니다.`, 500);
       }
     }
 
-    logger.info("✅ 주소 데이터 초기화 완료!");
-  } catch (error) {
-    logger.error("❌ 주소 데이터 초기화 실패:", error);
+    logger.info('(initializeAddressData)', {
+      message: '주소 데이터 초기화 완료',
+      counts: {
+        cities: insertedCityCount,
+        districts: insertedDistrictCount,
+        towns: insertedTownCount
+      }
+    });
+  } catch (err) {
+    logger.error('(initializeAddressData)', {
+      error: err.toString()
+    });
+    throw new AppError('주소 데이터 초기화 중 오류가 발생했습니다.', 500);
   }
 }

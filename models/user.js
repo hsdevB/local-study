@@ -42,7 +42,6 @@ class User extends Model {
   }
 
   static associate(db) {
-    // User 모델과 Product 모델 간의 N:M 관계 설정 (찜하기)
     this.hasMany(db.Study, {
       foreignKey: 'user_id',
       sourceKey: 'id',
@@ -54,6 +53,13 @@ class User extends Model {
       sourceKey: 'id',
       onDelete: 'CASCADE',
       as: 'StudyApplications',
+    });
+    // User와 TokenBlacklist 간의 1:N 관계 설정
+    this.hasMany(db.TokenBlacklist, {
+      foreignKey: 'userId',
+      sourceKey: 'userId',
+      onDelete: 'CASCADE',
+      as: 'BlacklistedTokens'
     });
   }
 }

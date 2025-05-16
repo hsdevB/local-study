@@ -1,18 +1,34 @@
 import townDao from '../dao/townDao.js';
 import logger from '../utils/logger.js';
+import { AppError } from '../utils/errorHandler.js';
 
 const townService = {
   fetchTownsByDistrictId: async (districtId) => {
     try {
-      const towns = await townDao.getTownsByDistrictId(districtId);
+      // 입력값 검증 및 변환
+      const numericDistrictId = Number(districtId);
+      if (!districtId || isNaN(numericDistrictId)) {
+        throw new AppError('유효하지 않은 시/군/구 ID입니다.', 400);
+      }
+
+      const towns = await townDao.getTownsByDistrictId(numericDistrictId);
+      
+      logger.info('(townService.fetchTownsByDistrictId)', {
+        districtId: numericDistrictId,
+        count: towns.length
+      });
+
       return towns.map(town => ({
         id: town.id,
         name: town.name,
         district_id: town.district_id
       }));
-    } catch (error) {
-      logger.error(`Failed to fetch towns for districtId=${districtId}:`, error);
-      throw new Error('Could not fetch towns');
+    } catch (err) {
+      logger.error('(townService.fetchTownsByDistrictId)', {
+        error: err.toString(),
+        districtId
+      });
+      throw err instanceof AppError ? err : new AppError('읍/면/동 목록 조회 중 오류가 발생했습니다.', 500);
     }
   }
 };

@@ -4,6 +4,7 @@ import cityRouter from './city.js';
 import districtRouter from './district.js';
 import townRouter from './town.js';
 import signupRouter from './signup.js';
+import userRouter from './user.js';
 const router = express.Router();
 
 /* GET home page. */
@@ -16,4 +17,5 @@ router.use('/city', cityRouter);
 router.use('/district', districtRouter);
 router.use('/town', townRouter);
 router.use('/signup', signupRouter);
+router.use('/user', userRouter);
 export default router;
