@@ -28,7 +28,7 @@ signupRouter.post('/', async (req, res) => {
     res.status(200).json(user);
   } catch (err) {
     logger.error(`(signupRouter.createUser) error: ${err.toString()}`);
-    res.status(500).json({ message: 'Internal Server Error' });
+    res.status(500).json({ message: err.toString() });
   }
 });
 
