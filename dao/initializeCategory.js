@@ -20,8 +20,8 @@ export async function initializeCategory() {
           logger.info(`Inserted category: ${category.name}`);
         }
     
-        logger.info('✅ Category initialize complete.');
+        logger.info('✅ 카테고리 데이터 초기화 완료.');
       } catch (err) {
-        logger.error('❌ Error while initialize categories:', err);
+        logger.error('❌ 카테고리 데이터 초기화 실패:', err);
       }
 }

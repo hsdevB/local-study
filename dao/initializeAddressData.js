@@ -23,31 +23,28 @@ export async function initializeAddressData() {
     for (const cityName in addressMap) {
       // 시/도 데이터 삽입
       const city = await City.create({ name: cityName });
-      logger.info(`${cityName} 시/도 데이터 삽입 완료.`);
 
       const districts = addressMap[cityName];
       for (const districtName in districts) {
         // 구/군 데이터 삽입
         const district = await District.create({
           name: districtName,
-          city_id: city.id, // 시/도와 연결되는 외래키
+          city_id: city.id,
         });
-        logger.info(`${districtName} 구/군 데이터 삽입 완료.`);
 
         const towns = districts[districtName];
         for (const townName of towns) {
           // 읍/면/동 데이터 삽입
           await Town.create({
             name: townName,
-            district_id: district.id, // 구/군과 연결되는 외래키
+            district_id: district.id,
           });
-          logger.info(`${townName} 읍/면/동 데이터 삽입 완료.`);
         }
       }
     }
 
-    logger.info("Database initialized successfully!");
+    logger.info("✅ 주소 데이터 초기화 완료!");
   } catch (error) {
-    logger.error("Error initializing the database:", error);
+    logger.error("❌ 주소 데이터 초기화 실패:", error);
   }
 }
