@@ -5,6 +5,7 @@ import districtRouter from './district.js';
 import townRouter from './town.js';
 import signupRouter from './signup.js';
 import userRouter from './user.js';
+import passwordResetRouter from './passwordReset.js';
 const router = express.Router();
 
 /* GET home page. */
@@ -18,4 +19,5 @@ router.use('/district', districtRouter);
 router.use('/town', townRouter);
 router.use('/signup', signupRouter);
 router.use('/user', userRouter);
+router.use('/password-reset', passwordResetRouter);
 export default router;

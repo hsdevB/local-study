@@ -12,6 +12,7 @@ import { errorHandler } from './utils/errorHandler.js';
 
 import indexRouter from './routes/index.js';
 
+
 const app = express();
 logger.info("Starting the application...");
 
