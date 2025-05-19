@@ -47,7 +47,7 @@ const studyDao = {
                     {
                         model: User,
                         as: 'User',
-                        attributes: ['id', 'userId']
+                        attributes: ['userId', 'nickname']
                     }
                 ],
                 order: [['created_at', 'DESC']],
@@ -86,7 +86,7 @@ const studyDao = {
                     {
                         model: User,
                         as: 'User',
-                        attributes: ['id', 'userId']
+                        attributes: ['userId', 'nickname']
                     }
                 ]
             });
@@ -195,7 +195,7 @@ const studyDao = {
                     {
                         model: User,
                         as: 'User',
-                        attributes: ['id', 'userId']
+                        attributes: ['userId', 'nickname']
                     }
                 ],
                 order: [['end_date', 'DESC']]
@@ -260,7 +260,7 @@ const studyDao = {
                     {
                         model: User,
                         as: 'User',
-                        attributes: ['userId', 'username']
+                        attributes: ['userId', 'nickname']
                     },
                     {
                         model: Category,

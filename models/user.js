@@ -41,6 +41,27 @@ class User extends Model {
         gender: {
           type: DataTypes.STRING(20),
         },
+        nickname: {
+          type: DataTypes.STRING,
+          allowNull: false,
+          defaultValue: 'user',
+          unique: {
+            args: true,
+            where: {
+              deletedAt: null
+            }
+          }
+        },
+        created_at: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW
+        },
+        updated_at: {
+          type: DataTypes.DATE,
+          allowNull: false,
+          defaultValue: DataTypes.NOW
+        }
       },
       {
         sequelize,

@@ -14,7 +14,7 @@ const signupDao = {
             });
             return {
                 id: user.id,
-                userId: user.userId,
+                nickname: user.nickname,
                 email: user.email,
                 username: user.username,
                 createdAt: user.createdAt

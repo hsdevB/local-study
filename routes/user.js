@@ -1,6 +1,8 @@
 import express from 'express';
 import userService from '../service/userService.js';
 import { authenticateToken } from '../utils/tokenUtil.js';
+import tokenUtil from '../utils/tokenUtil.js';
+import tokenBlacklistDao from '../dao/tokenBlacklistDao.js';
 
 const userRouter = express.Router();
 
@@ -26,18 +28,33 @@ userRouter.post('/refresh-token', async (req, res) => {
         }
 
         // 토큰 검증
-        const decoded = await authenticateToken(req, res, () => {});
+        const decoded = await tokenUtil.verifyToken(token);
         if (decoded.userId !== userId) {
             return res.status(401).json({ success: false, message: '유효하지 않은 토큰입니다.' });
         }
 
+        // 이전 토큰을 블랙리스트에 추가
+        await tokenBlacklistDao.addToBlacklist(token, userId);
+
+        // 새 토큰 발급
         const newToken = await tokenUtil.refreshToken(token);
+        
+        logger.info('(userRouter.refresh-token) 토큰 갱신 완료', {
+            userId,
+            timestamp: new Date().toISOString()
+        });
+
         res.status(200).json({
             success: true,
             message: '토큰이 갱신되었습니다.',
             data: { token: newToken }
         });
     } catch (err) {
+        logger.error('(userRouter.refresh-token) 토큰 갱신 실패', {
+            error: err.toString(),
+            userId: req.body.userId,
+            timestamp: new Date().toISOString()
+        });
         res.status(500).json({ success: false, message: '토큰 갱신 중 오류가 발생했습니다.' });
     }
 });

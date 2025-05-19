@@ -40,11 +40,12 @@ const studyService = {
 
     getStudies: async (req, res) => {
         try {
-            const { category_id, city_id, search } = req.query;
+            const { category_id, city_id, search, status } = req.query || {};
             const where = {};
 
             if (category_id) where.category_id = category_id;
             if (city_id) where.city_id = city_id;
+            if (status) where.status = status;
             if (search) {
                 where[Op.or] = [
                     { title: { [Op.like]: `%${search}%` } },
@@ -226,43 +227,117 @@ const studyService = {
             if (!req.user) {
                 return res.status(401).json({ success: false, message: '로그인이 필요한 서비스입니다.' });
             }
-            const studyData = { ...req.body, user_id: req.user.id };
-            const study = await this.createStudy(studyData);
-            res.status(201).json({ success: true, message: '스터디가 생성되었습니다.', data: study });
+            const studyData = {
+                ...req.body,
+                user_id: req.user.id
+            };
+
+            const study = await studyDao.createStudy(studyData);
+
+            logger.info('(studyService.createStudyHandler) 스터디 생성 완료', {
+                studyId: study.id,
+                userId: req.user.id,
+                timestamp: new Date().toISOString()
+            });
+
+            res.status(201).json({
+                success: true,
+                message: '스터디가 생성되었습니다.',
+                data: study
+            });
         } catch (err) {
+            logger.error('(studyService.createStudyHandler) 스터디 생성 실패', {
+                error: err.toString(),
+                userId: req.user?.id,
+                timestamp: new Date().toISOString()
+            });
             res.status(500).json({ success: false, message: '스터디 생성 중 오류가 발생했습니다.' });
         }
     },
 
     async getStudiesHandler(req, res) {
         try {
-            const { category_id, city_id, search } = req.query;
+            const { category_id, city_id, search, status } = req.query || {};
             const where = {};
+            
             if (category_id) where.category_id = category_id;
             if (city_id) where.city_id = city_id;
+            if (status) where.status = status;
             if (search) {
                 where[Op.or] = [
                     { title: { [Op.like]: `%${search}%` } },
                     { description: { [Op.like]: `%${search}%` } }
                 ];
             }
-            const studies = await this.getStudies(where);
-            res.status(200).json({ success: true, data: studies });
+
+            const studies = await studyDao.findStudies(where);
+
+            logger.info('(studyService.getStudiesHandler) 스터디 목록 조회 완료', {
+                resultCount: studies.length,
+                timestamp: new Date().toISOString()
+            });
+
+            res.status(200).json({
+                success: true,
+                message: studies.length === 0 ? '등록된 스터디가 없습니다.' : '스터디 목록 조회 성공',
+                data: studies || []
+            });
         } catch (err) {
-            res.status(500).json({ success: false, message: '스터디 목록 조회 중 오류가 발생했습니다.' });
+            logger.error('(studyService.getStudiesHandler) 스터디 목록 조회 실패', {
+                error: err.toString(),
+                errorMessage: err.message,
+                timestamp: new Date().toISOString()
+            });
+            res.status(500).json({ 
+                success: false, 
+                message: '스터디 목록 조회 중 오류가 발생했습니다.' 
+            });
         }
     },
 
     async getStudyByIdHandler(req, res) {
         try {
             const { id } = req.params;
-            const study = await this.getStudyById(id);
+            const study = await studyDao.findStudyById(id);
+
             if (!study) {
-                return res.status(404).json({ success: false, message: '존재하지 않는 스터디입니다.' });
+                logger.warn('(studyService.getStudyByIdHandler) 존재하지 않는 스터디 조회 시도', {
+                    studyId: id,
+                    timestamp: new Date().toISOString()
+                });
+                return res.status(404).json({ 
+                    success: false, 
+                    message: '존재하지 않는 스터디입니다.' 
+                });
             }
-            res.status(200).json({ success: true, data: study });
+
+            let responseData = { study };
+
+            if (req.user) {
+                const application = await studyDao.findStudyApplication(id, req.user.id);
+                responseData.application = application;
+            }
+
+            logger.info('(studyService.getStudyByIdHandler) 스터디 상세 조회 완료', {
+                studyId: id,
+                userId: req.user?.id,
+                timestamp: new Date().toISOString()
+            });
+
+            res.status(200).json({
+                success: true,
+                data: responseData
+            });
         } catch (err) {
-            res.status(500).json({ success: false, message: '스터디 상세 조회 중 오류가 발생했습니다.' });
+            logger.error('(studyService.getStudyByIdHandler) 스터디 상세 조회 실패', {
+                error: err.toString(),
+                studyId: req.params.id,
+                timestamp: new Date().toISOString()
+            });
+            res.status(500).json({ 
+                success: false, 
+                message: '스터디 상세 조회 중 오류가 발생했습니다.' 
+            });
         }
     },
 
@@ -272,13 +347,37 @@ const studyService = {
                 return res.status(401).json({ success: false, message: '로그인이 필요한 서비스입니다.' });
             }
             const { id } = req.params;
-            const study = await this.getStudyByIdAndUserId(id, req.user.id);
+            const study = await studyDao.findStudyByIdAndUserId(id, req.user.id);
+            
             if (!study) {
+                logger.warn('(studyService.updateStudyHandler) 존재하지 않는 스터디 수정 시도 또는 권한 없음', {
+                    studyId: id,
+                    userId: req.user.id,
+                    timestamp: new Date().toISOString()
+                });
                 return res.status(404).json({ success: false, message: '존재하지 않는 스터디이거나 수정 권한이 없습니다.' });
             }
-            const updatedStudy = await this.updateStudy(study, req.body);
-            res.status(200).json({ success: true, message: '스터디가 수정되었습니다.', data: updatedStudy });
+
+            const updatedStudy = await studyDao.updateStudy(study, req.body);
+
+            logger.info('(studyService.updateStudyHandler) 스터디 수정 완료', {
+                studyId: id,
+                userId: req.user.id,
+                timestamp: new Date().toISOString()
+            });
+
+            res.status(200).json({
+                success: true,
+                message: '스터디가 수정되었습니다.',
+                data: updatedStudy
+            });
         } catch (err) {
+            logger.error('(studyService.updateStudyHandler) 스터디 수정 실패', {
+                error: err.toString(),
+                studyId: req.params.id,
+                userId: req.user?.id,
+                timestamp: new Date().toISOString()
+            });
             res.status(500).json({ success: false, message: '스터디 수정 중 오류가 발생했습니다.' });
         }
     },
@@ -289,23 +388,65 @@ const studyService = {
                 return res.status(401).json({ success: false, message: '로그인이 필요한 서비스입니다.' });
             }
             const { id } = req.params;
-            const study = await this.getStudyByIdAndUserId(id, req.user.id);
+            const study = await studyDao.findStudyByIdAndUserId(id, req.user.id);
+            
             if (!study) {
+                logger.warn('(studyService.deleteStudyHandler) 존재하지 않는 스터디 삭제 시도 또는 권한 없음', {
+                    studyId: id,
+                    userId: req.user.id,
+                    timestamp: new Date().toISOString()
+                });
                 return res.status(404).json({ success: false, message: '존재하지 않는 스터디이거나 삭제 권한이 없습니다.' });
             }
-            await this.deleteStudy(study);
-            res.status(200).json({ success: true, message: '스터디가 삭제되었습니다.' });
+
+            await studyDao.deleteStudy(study);
+
+            logger.info('(studyService.deleteStudyHandler) 스터디 삭제 완료', {
+                studyId: id,
+                userId: req.user.id,
+                timestamp: new Date().toISOString()
+            });
+
+            res.status(200).json({
+                success: true,
+                message: '스터디가 삭제되었습니다.'
+            });
         } catch (err) {
+            logger.error('(studyService.deleteStudyHandler) 스터디 삭제 실패', {
+                error: err.toString(),
+                studyId: req.params.id,
+                userId: req.user?.id,
+                timestamp: new Date().toISOString()
+            });
             res.status(500).json({ success: false, message: '스터디 삭제 중 오류가 발생했습니다.' });
         }
     },
 
     async getEndedStudiesHandler(req, res) {
         try {
-            const userId = req.user.userId;
-            const studies = await this.getEndedStudies(userId);
-            res.status(200).json({ success: true, message: '종료된 스터디 조회 성공', data: studies });
+            if (!req.user) {
+                return res.status(401).json({ success: false, message: '로그인이 필요한 서비스입니다.' });
+            }
+            const userId = req.user.id;
+            const studies = await studyDao.getEndedStudies(userId);
+            
+            logger.info('(studyService.getEndedStudiesHandler) 종료된 스터디 조회 완료', {
+                userId,
+                count: studies.length,
+                timestamp: new Date().toISOString()
+            });
+
+            res.status(200).json({
+                success: true,
+                message: '종료된 스터디 조회 성공',
+                data: studies
+            });
         } catch (err) {
+            logger.error('(studyService.getEndedStudiesHandler) 종료된 스터디 조회 실패', {
+                error: err.toString(),
+                userId: req.user?.id,
+                timestamp: new Date().toISOString()
+            });
             res.status(500).json({ success: false, message: '종료된 스터디 조회 중 오류가 발생했습니다.' });
         }
     }

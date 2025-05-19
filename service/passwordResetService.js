@@ -22,14 +22,14 @@ const passwordResetService = {
       // 3. 임시 비밀번호 생성 (8자리: 영문 대소문자 + 숫자)
       const tempPassword = crypto.randomBytes(4).toString('hex').toUpperCase();
 
-      // 4. 임시 비밀번호 해싱
-      const hashedTempPassword = await hashUtil.makePasswordHash(tempPassword);
+      // 4. 비밀번호 업데이트와 이메일 발송을 병렬로 처리
+      const [hashedTempPassword] = await Promise.all([
+        hashUtil.makePasswordHash(tempPassword),
+        emailUtil.sendPasswordResetEmail(email, tempPassword)
+      ]);
 
       // 5. 비밀번호 업데이트
       await userDao.updatePassword(userId, hashedTempPassword);
-
-      // 6. 이메일 발송
-      await emailUtil.sendPasswordResetEmail(email, tempPassword);
 
       logger.info('(passwordResetService.requestPasswordReset) 비밀번호 재설정 완료', {
         userId,

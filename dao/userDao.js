@@ -7,7 +7,7 @@ const userDao = {
         try {
             const user = await User.findOne({ 
                 where: { userId: params.userId },
-                attributes: ['id', 'userId', 'password', 'email', 'username', 'createdAt', 'updatedAt']
+                attributes: ['id', 'nickname', 'email', 'username', 'createdAt', 'updatedAt']
             });
             return user;
         } catch (err) {
@@ -24,7 +24,7 @@ const userDao = {
         try {
             const user = await User.findOne({ 
                 where: { userId },
-                attributes: ['id', 'userId', 'password', 'email', 'username', 'phoneNumber', 'birthDate', 'gender']
+                attributes: ['id', 'nickname', 'email', 'username', 'phoneNumber', 'birthDate', 'gender']
             });
             return user;
         } catch (err) {

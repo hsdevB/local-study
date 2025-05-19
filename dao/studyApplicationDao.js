@@ -1,6 +1,7 @@
 import StudyApplication from '../models/studyApplication.js';
 import Study from '../models/study.js';
 import User from '../models/user.js';
+import logger from '../utils/logger.js';
 
 class StudyApplicationDao {
   // 스터디 참가 신청 생성
@@ -32,7 +33,7 @@ class StudyApplicationDao {
       include: [{
         model: User,
         as: 'User',
-        attributes: ['id', 'nickname', 'email']
+        attributes: ['nickname']
       }]
     });
   }
@@ -66,8 +67,7 @@ class StudyApplicationDao {
     return await StudyApplication.destroy({
       where: {
         id: applicationId,
-        user_id: userId,
-        status: 'pending'
+        user_id: userId
       }
     });
   }
@@ -80,6 +80,27 @@ class StudyApplicationDao {
         status: 'accepted'
       }
     });
+  }
+
+  // 스터디와 사용자 ID로 신청 내역 조회
+  async findApplicationByStudyAndUser(studyId, userId) {
+    try {
+      const application = await StudyApplication.findOne({
+        where: {
+          study_id: studyId,
+          user_id: userId
+        }
+      });
+      return application;
+    } catch (error) {
+      logger.error('(studyApplicationDao.findApplicationByStudyAndUser) 신청 내역 조회 실패', {
+        error: error.toString(),
+        studyId,
+        userId,
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
   }
 }
 
