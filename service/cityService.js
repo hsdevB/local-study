@@ -7,8 +7,9 @@ const cityService = {
     try {
       const cities = await cityDao.getAllCities();
       
-      logger.info('(cityService.fetchAllCities)', {
-        count: cities.length
+      logger.info('(cityService.fetchAllCities) 시/도 목록 조회 완료', {
+        count: cities.length,
+        timestamp: new Date().toISOString()
       });
 
       return cities.map(city => ({
@@ -16,8 +17,9 @@ const cityService = {
         name: city.name
       }));
     } catch (err) {
-      logger.error('(cityService.fetchAllCities)', {
-        error: err.toString()
+      logger.error('(cityService.fetchAllCities) 시/도 목록 조회 실패', {
+        error: err.toString(),
+        timestamp: new Date().toISOString()
       });
       throw err instanceof AppError ? err : new AppError('시/도 목록 조회 중 오류가 발생했습니다.', 500);
     }

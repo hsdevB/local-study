@@ -29,5 +29,11 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
+  },
+  "sequelize-cli": {
+    "config": "config/database.cjs",
+    "models-path": "models",
+    "seeders-path": "seeders",
+    "migrations-path": "migrations"
   }
 }

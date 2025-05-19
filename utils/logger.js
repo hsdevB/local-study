@@ -1,55 +1,62 @@
-import { createLogger, format, transports } from "winston";
-import "winston-daily-rotate-file";
-import dotenv from "dotenv";
-import fs from "fs";
+import winston from 'winston';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// logger level 세팅
-const loggerLevel = process.env.LOGGER_LEVEL || "info";
-
-// const { env } = envConfig;
-const logDir = "logs";
-
-// Log only if info.level less than or equal to this level
-// { error: 0, warn: 1, info: 2, verbose: 3, debug: 4, silly: 5 }
-
-// log directory
-if (!fs.existsSync(logDir)) {
-  fs.mkdirSync(logDir);
-}
-
-// log file
-const dailyRotateFileTransport = new transports.DailyRotateFile({
-  // 로그파일 출력 세팅
-  filename: `${logDir}/%DATE%.log`,
-  datePattern: "YYYY-MM-DD",
-  format: format.combine(
-    format.printf((info) => `${info.timestamp}[${info.level}] ${info.message}`)
-  ),
+const logFormat = winston.format.printf(({ level, message, timestamp, ...metadata }) => {
+    let msg = `${timestamp} [${level}] : ${message}`;
+    if (Object.keys(metadata).length > 0) {
+        msg += ` ${JSON.stringify(metadata)}`;
+    }
+    return msg;
 });
 
-const logger = createLogger({
-  // 로거 환경 세팅(기본 세팅)
-  level: loggerLevel,
-  format: format.combine(
-    // format.label( { label: 'label123' }),
-    format.timestamp({ format: "YYYY-MM-DD HH:mm:ss.SSS" }),
-    format.json()
-  ),
-  transports: [
-    new transports.Console({
-      // 콘솔 출력 세팅
-      level: loggerLevel,
-      format: format.combine(
-        format.colorize(),
-        format.printf(
-          (info) => `${info.timestamp}[${info.level}] ${info.message}`
+const logger = winston.createLogger({
+    level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+    format: winston.format.combine(
+        winston.format.timestamp({
+            format: 'YYYY-MM-DD HH:mm:ss'
+        }),
+        winston.format.errors({ stack: true }),
+        winston.format.splat(),
+        winston.format.json()
+    ),
+    defaultMeta: { service: 'local-study-service' },
+    transports: [
+        new winston.transports.File({
+            filename: path.join(__dirname, '../logs/error.log'),
+            level: 'error',
+            format: winston.format.combine(
+                winston.format.timestamp({
+                    format: 'YYYY-MM-DD HH:mm:ss'
+                }),
+                logFormat
+            )
+        }),
+        new winston.transports.File({
+            filename: path.join(__dirname, '../logs/combined.log'),
+            format: winston.format.combine(
+                winston.format.timestamp({
+                    format: 'YYYY-MM-DD HH:mm:ss'
+                }),
+                logFormat
+            )
+        })
+    ]
+});
+
+if (process.env.NODE_ENV !== 'production') {
+    logger.add(new winston.transports.Console({
+        format: winston.format.combine(
+            winston.format.colorize(),
+            winston.format.timestamp({
+                format: 'YYYY-MM-DD HH:mm:ss'
+            }),
+            logFormat
         )
-      ),
-    }),
-    dailyRotateFileTransport,
-  ],
-});
+    }));
+}
 
 export default logger;

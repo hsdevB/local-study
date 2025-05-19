@@ -12,7 +12,6 @@ import { errorHandler } from './utils/errorHandler.js';
 
 import indexRouter from './routes/index.js';
 
-
 const app = express();
 logger.info("Starting the application...");
 
@@ -54,29 +53,49 @@ app.use((req, res, next) => {
     next();
 });
 
+// 타임아웃 설정
+app.use((req, res, next) => {
+    // 요청 타임아웃 설정 (3초)
+    req.setTimeout(3000, () => {
+        logger.error('(app) 요청 타임아웃', {
+            path: req.path,
+            method: req.method,
+            timestamp: new Date().toISOString()
+        });
+    });
+
+    // 응답 타임아웃 설정 (3초)
+    res.setTimeout(3000, () => {
+        logger.error('(app) 응답 타임아웃', {
+            path: req.path,
+            method: req.method,
+            timestamp: new Date().toISOString()
+        });
+    });
+
+    next();
+});
+
 app.use('/', indexRouter);
 
-// 데이터베이스 연결 및 테이블 생성 후 초기 데이터 삽입
-models.sequelize
-  .authenticate()
+// 데이터베이스 연결 및 마이그레이션 실행
+models.sequelize.authenticate()
   .then(() => {
     logger.info("DB connection success");
-
-    // sequelize sync (table 생성)
-    models.sequelize
-      .sync({ alter: true })
-      .then(() => {
-        logger.info("Sequelize sync success");
-        // 테이블 생성 후 초기 데이터 삽입
-        initializeAddressData();
-        initializeCategory();
-      })
-      .catch((err) => {
-        logger.error("Sequelize sync error", err);
-      });
+    return models.sequelize.sync({ alter: true });
+  })
+  .then(() => {
+    logger.info("Sequelize sync success");
+    // 테이블 생성 후 초기 데이터 삽입
+    initializeAddressData();
+    initializeCategory();
+    // 서버 시작
+    app.listen(process.env.PORT || 3000, () => {
+      logger.info(`서버가 ${process.env.PORT || 3000}번 포트에서 실행 중입니다.`);
+    });
   })
   .catch((err) => {
-    logger.error("DB Connection fail", err);
+    logger.error("Sequelize sync error", err);
   });
 
 // catch 404 and forward to error handler
@@ -101,12 +120,10 @@ app.use(errorHandler);
 // 서버 에러 처리
 process.on('uncaughtException', (err) => {
     logger.error('(app) Uncaught Exception:', err);
-    process.exit(1);
 });
 
 process.on('unhandledRejection', (err) => {
     logger.error('(app) Unhandled Rejection:', err);
-    process.exit(1);
 });
 
 export default app;

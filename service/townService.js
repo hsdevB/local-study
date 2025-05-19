@@ -13,9 +13,10 @@ const townService = {
 
       const towns = await townDao.getTownsByDistrictId(numericDistrictId);
       
-      logger.info('(townService.fetchTownsByDistrictId)', {
+      logger.info('(townService.fetchTownsByDistrictId) 읍/면/동 목록 조회 완료', {
         districtId: numericDistrictId,
-        count: towns.length
+        count: towns.length,
+        timestamp: new Date().toISOString()
       });
 
       return towns.map(town => ({
@@ -24,9 +25,10 @@ const townService = {
         district_id: town.district_id
       }));
     } catch (err) {
-      logger.error('(townService.fetchTownsByDistrictId)', {
+      logger.error('(townService.fetchTownsByDistrictId) 읍/면/동 목록 조회 실패', {
         error: err.toString(),
-        districtId
+        districtId,
+        timestamp: new Date().toISOString()
       });
       throw err instanceof AppError ? err : new AppError('읍/면/동 목록 조회 중 오류가 발생했습니다.', 500);
     }

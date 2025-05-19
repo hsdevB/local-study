@@ -53,7 +53,7 @@ const signupService = {
             // 8. 사용자 생성
             const user = await signupDao.createUser(params);
             
-            logger.info('(signupService.createUser)', {
+            logger.info('(signupService.createUser) 회원가입 완료', {
                 userId: params.userId,
                 email: params.email,
                 timestamp: new Date().toISOString()
@@ -61,12 +61,13 @@ const signupService = {
 
             return user;
         } catch (err) {
-            logger.error('(signupService.createUser)', {
+            logger.error('(signupService.createUser) 회원가입 실패', {
                 error: err.toString(),
                 params: {
                     userId: params.userId,
                     email: params.email
-                }
+                },
+                timestamp: new Date().toISOString()
             });
             throw err;
         }

@@ -26,7 +26,8 @@ class Study extends Model {
         },
         current_participants: {
           type: DataTypes.INTEGER(),
-        }
+          defaultValue: 1
+        },
       },
       {
         sequelize,

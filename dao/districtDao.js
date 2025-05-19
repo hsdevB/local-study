@@ -8,15 +8,17 @@ const districtDao = {
       const districts = await District.findAll({
         where: { city_id: cityId }
       });
-      logger.info('(districtDao.getDistrictsByCityId)', {
+      logger.info('(districtDao.getDistrictsByCityId) 시/군/구 목록 조회 완료', {
         cityId,
-        count: districts.length
+        count: districts.length,
+        timestamp: new Date().toISOString()
       });
       return districts;
     } catch (err) {
-      logger.error('(districtDao.getDistrictsByCityId)', {
+      logger.error('(districtDao.getDistrictsByCityId) 시/군/구 목록 조회 실패', {
         error: err.toString(),
-        cityId
+        cityId,
+        timestamp: new Date().toISOString()
       });
       throw new AppError('시/군/구 목록 조회 중 오류가 발생했습니다.', 500);
     }

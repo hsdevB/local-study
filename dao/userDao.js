@@ -11,9 +11,10 @@ const userDao = {
             });
             return user;
         } catch (err) {
-            logger.error('(userDao.selectUser)', {
+            logger.error('(userDao.selectUser) 사용자 조회 실패', {
                 error: err.toString(),
-                userId: params.userId
+                userId: params.userId,
+                timestamp: new Date().toISOString()
             });
             throw new AppError('사용자 조회 중 오류가 발생했습니다.', 500);
         }
@@ -27,9 +28,10 @@ const userDao = {
             });
             return user;
         } catch (err) {
-            logger.error('(userDao.findByUserId)', {
+            logger.error('(userDao.findByUserId) 사용자 조회 실패', {
                 error: err.toString(),
-                userId
+                userId,
+                timestamp: new Date().toISOString()
             });
             throw new AppError('사용자 조회 중 오류가 발생했습니다.', 500);
         }
@@ -43,9 +45,10 @@ const userDao = {
             });
             return user;
         } catch (err) {
-            logger.error('(userDao.findByEmail)', {
+            logger.error('(userDao.findByEmail) 이메일 조회 실패', {
                 error: err.toString(),
-                email
+                email,
+                timestamp: new Date().toISOString()
             });
             throw new AppError('이메일 조회 중 오류가 발생했습니다.', 500);
         }
@@ -62,16 +65,17 @@ const userDao = {
                 throw new AppError('비밀번호 업데이트에 실패했습니다.', 500);
             }
 
-            logger.info('(userDao.updatePassword)', {
+            logger.info('(userDao.updatePassword) 비밀번호 변경 완료', {
                 userId,
                 timestamp: new Date().toISOString()
             });
 
             return true;
         } catch (err) {
-            logger.error('(userDao.updatePassword)', {
+            logger.error('(userDao.updatePassword) 비밀번호 변경 실패', {
                 error: err.toString(),
-                userId
+                userId,
+                timestamp: new Date().toISOString()
             });
             throw new AppError('비밀번호 업데이트 중 오류가 발생했습니다.', 500);
         }
@@ -93,7 +97,7 @@ const userDao = {
                 attributes: ['userId', 'email', 'username', 'phoneNumber', 'birthDate', 'gender']
             });
 
-            logger.info('(userDao.updateUser)', {
+            logger.info('(userDao.updateUser) 회원정보 수정 완료', {
                 userId,
                 updatedFields: Object.keys(updateData),
                 timestamp: new Date().toISOString()
@@ -101,10 +105,11 @@ const userDao = {
 
             return updatedUser;
         } catch (err) {
-            logger.error('(userDao.updateUser)', {
+            logger.error('(userDao.updateUser) 회원정보 수정 실패', {
                 error: err.toString(),
                 userId,
-                updateData
+                updateData,
+                timestamp: new Date().toISOString()
             });
             throw new AppError('회원정보 업데이트 중 오류가 발생했습니다.', 500);
         }
@@ -120,16 +125,17 @@ const userDao = {
                 throw new AppError('회원 탈퇴에 실패했습니다.', 500);
             }
 
-            logger.info('(userDao.deleteUser)', {
+            logger.info('(userDao.deleteUser) 회원 탈퇴 완료', {
                 userId,
                 timestamp: new Date().toISOString()
             });
 
             return true;
         } catch (err) {
-            logger.error('(userDao.deleteUser)', {
+            logger.error('(userDao.deleteUser) 회원 탈퇴 실패', {
                 error: err.toString(),
-                userId
+                userId,
+                timestamp: new Date().toISOString()
             });
             throw new AppError('회원 탈퇴 중 오류가 발생했습니다.', 500);
         }

@@ -31,20 +31,22 @@ const passwordResetService = {
       // 6. 이메일 발송
       await emailUtil.sendPasswordResetEmail(email, tempPassword);
 
-      logger.info('(passwordResetService.requestPasswordReset)', {
+      logger.info('(passwordResetService.requestPasswordReset) 비밀번호 재설정 완료', {
         userId,
         email,
-        status: 'success'
+        status: 'success',
+        timestamp: new Date().toISOString()
       });
 
       return {
         message: '임시 비밀번호가 이메일로 발송되었습니다.'
       };
     } catch (err) {
-      logger.error('(passwordResetService.requestPasswordReset)', {
+      logger.error('(passwordResetService.requestPasswordReset) 비밀번호 재설정 실패', {
         error: err.toString(),
         userId,
-        email
+        email,
+        timestamp: new Date().toISOString()
       });
       throw err;
     }

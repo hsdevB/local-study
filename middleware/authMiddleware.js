@@ -46,33 +46,6 @@ const authMiddleware = {
                 });
             }
         }
-    },
-
-    // 관리자 권한 검증 미들웨어
-    verifyAdmin: async (req, res, next) => {
-        try {
-            if (!req.user || req.user.role !== 'admin') {
-                throw new AppError('관리자 권한이 필요합니다.', 403);
-            }
-            next();
-        } catch (err) {
-            logger.error('(authMiddleware.verifyAdmin)', {
-                error: err.toString(),
-                userId: req.user?.userId
-            });
-
-            if (err instanceof AppError) {
-                res.status(err.statusCode).json({
-                    success: false,
-                    message: err.message
-                });
-            } else {
-                res.status(500).json({
-                    success: false,
-                    message: '권한 확인 중 오류가 발생했습니다.'
-                });
-            }
-        }
     }
 };
 

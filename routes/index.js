@@ -6,6 +6,8 @@ import townRouter from './town.js';
 import signupRouter from './signup.js';
 import userRouter from './user.js';
 import passwordResetRouter from './passwordReset.js';
+import studyRouter from './study.js';
+
 const router = express.Router();
 
 /* GET home page. */
@@ -20,4 +22,5 @@ router.use('/town', townRouter);
 router.use('/signup', signupRouter);
 router.use('/user', userRouter);
 router.use('/password-reset', passwordResetRouter);
+router.use('/study', studyRouter);
 export default router;

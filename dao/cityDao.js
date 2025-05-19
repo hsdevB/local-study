@@ -6,13 +6,15 @@ const cityDao = {
   getAllCities: async () => {
     try {
       const cities = await City.findAll();
-      logger.info('(cityDao.getAllCities)', {
-        count: cities.length
+      logger.info('(cityDao.getAllCities) 시/도 목록 조회 완료', {
+        count: cities.length,
+        timestamp: new Date().toISOString()
       });
       return cities;
     } catch (err) {
-      logger.error('(cityDao.getAllCities)', {
-        error: err.toString()
+      logger.error('(cityDao.getAllCities) 시/도 목록 조회 실패', {
+        error: err.toString(),
+        timestamp: new Date().toISOString()
       });
       throw new AppError('시/도 목록 조회 중 오류가 발생했습니다.', 500);
     }

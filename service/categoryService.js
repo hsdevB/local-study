@@ -7,8 +7,9 @@ const categoryService = {
         try {
             const categories = await categoryDao.getAllCategories();
             
-            logger.info('(categoryService.getAllCategories)', {
-                count: categories.length
+            logger.info('(categoryService.getAllCategories) 카테고리 목록 조회 완료', {
+                count: categories.length,
+                timestamp: new Date().toISOString()
             });
 
             return categories.map(category => ({
@@ -16,8 +17,9 @@ const categoryService = {
                 name: category.name,
             }));
         } catch (err) {
-            logger.error('(categoryService.getAllCategories)', {
-                error: err.toString()
+            logger.error('(categoryService.getAllCategories) 카테고리 목록 조회 실패', {
+                error: err.toString(),
+                timestamp: new Date().toISOString()
             });
             throw err instanceof AppError ? err : new AppError('카테고리 목록 조회 중 오류가 발생했습니다.', 500);
         }

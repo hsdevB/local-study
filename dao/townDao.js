@@ -8,15 +8,17 @@ const townDao = {
       const towns = await Town.findAll({
         where: { district_id: districtId }
       });
-      logger.info('(townDao.getTownsByDistrictId)', {
+      logger.info('(townDao.getTownsByDistrictId) 읍/면/동 목록 조회 완료', {
         districtId,
-        count: towns.length
+        count: towns.length,
+        timestamp: new Date().toISOString()
       });
       return towns;
     } catch (err) {
-      logger.error('(townDao.getTownsByDistrictId)', {
+      logger.error('(townDao.getTownsByDistrictId) 읍/면/동 목록 조회 실패', {
         error: err.toString(),
-        districtId
+        districtId,
+        timestamp: new Date().toISOString()
       });
       throw new AppError('읍/면/동 목록 조회 중 오류가 발생했습니다.', 500);
     }

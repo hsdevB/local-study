@@ -6,6 +6,23 @@ import tokenUtil from '../utils/tokenUtil.js';
 
 const userRouter = express.Router();
 
+// 인증 미들웨어
+const authenticateToken = async (req, res, next) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            throw new AppError('인증 토큰이 필요합니다.', 401);
+        }
+
+        const token = authHeader.split(' ')[1];
+        const decoded = await tokenUtil.verifyToken(token);
+        req.user = decoded;
+        next();
+    } catch (err) {
+        next(new AppError('유효하지 않은 토큰입니다.', 401));
+    }
+};
+
 // 로그인 라우트
 userRouter.post('/login', async (req, res) => {
     try {
@@ -205,37 +222,19 @@ userRouter.post('/refresh-token', async (req, res) => {
 });
 
 // 로그아웃 라우트
-userRouter.post('/logout', async (req, res) => {
+userRouter.post('/logout', authenticateToken, async (req, res, next) => {
     try {
-        const { userId } = req.body;
-
-        if (!userId) {
-            throw new AppError('사용자 ID는 필수 입력값입니다.', 400);
-        }
-
-        await userService.logout(userId);
+        const { userId } = req.user;
+        const token = req.headers.authorization?.split(' ')[1];
         
-        res.status(200).json({
+        await userService.logout(userId, token);
+        
+        res.status(200).json({ 
             success: true,
-            message: '로그아웃이 완료되었습니다.'
+            message: '로그아웃되었습니다.' 
         });
     } catch (err) {
-        logger.error('(userRouter.logout)', {
-            error: err.toString(),
-            userId: req.body.userId
-        });
-
-        if (err instanceof AppError) {
-            res.status(err.statusCode).json({
-                success: false,
-                message: err.message
-            });
-        } else {
-            res.status(500).json({
-                success: false,
-                message: '로그아웃 처리 중 오류가 발생했습니다.'
-            });
-        }
+        next(err);
     }
 });
 

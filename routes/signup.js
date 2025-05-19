@@ -29,8 +29,6 @@ signupRouter.post('/', async (req, res) => {
         validationUtil.validateUserId(params.userId);
         validationUtil.validatePassword(params.password);
         validationUtil.validateEmail(params.email);
-        validationUtil.validatePhoneNumber(params.phoneNumber);
-        validationUtil.validateBirthDate(params.birthDate);
 
         // 사용자 생성
         const user = await signupService.createUser(params);

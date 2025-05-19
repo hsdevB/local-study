@@ -5,9 +5,14 @@ class User extends Model {
     return super.init(
       {
         userId: {
-          type: DataTypes.STRING(100),
+          type: DataTypes.STRING(20),
           allowNull: false,
-          unique: true,
+          unique: {
+            args: true,
+            where: {
+              deletedAt: null
+            }
+          }
         },
         password: {
           type: DataTypes.STRING(255),
@@ -18,8 +23,14 @@ class User extends Model {
           allowNull: false,
         },
         email: {
-          type: DataTypes.STRING(100),
+          type: DataTypes.STRING(50),
           allowNull: false,
+          unique: {
+            args: true,
+            where: {
+              deletedAt: null
+            }
+          }
         },
         phoneNumber: {
           type: DataTypes.STRING(20),

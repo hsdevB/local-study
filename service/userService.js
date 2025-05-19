@@ -23,7 +23,7 @@ const userService = {
             }
 
             // 보안을 위한 로깅 - 로그인 시도
-            logger.info('(userService.login) Login attempt', {
+            logger.info('(userService.login) 로그인 시도', {
                 userId: params.userId,
                 timestamp: new Date().toISOString(),
                 ip: params.ip || 'unknown',
@@ -36,9 +36,9 @@ const userService = {
             // 1-1. 사용자 존재 여부 확인
             if (!userInfo) {
                 const err = new Error(`${params.userId} 의 계정정보가 존재하지 않습니다.`);
-                logger.error('(userService.login)', err.toString());
+                logger.error('(userService.login) 로그인 실패 - 존재하지 않는 계정', err.toString());
                 // 보안을 위한 로깅 - 존재하지 않는 계정 로그인 시도
-                logger.warn('(userService.login) Failed login attempt - User not found', {
+                logger.warn('(userService.login) 로그인 실패 - 존재하지 않는 계정', {
                     userId: params.userId,
                     timestamp: new Date().toISOString(),
                     ip: params.ip || 'unknown'
@@ -54,9 +54,8 @@ const userService = {
 
             if (!checkPassword) {
                 const err = new Error("입력하신 비밀번호가 일치하지않습니다.");
-                logger.error('(userService.login)', err.toString());
-                // 보안을 위한 로깅 - 잘못된 비밀번호 로그인 시도
-                logger.warn('(userService.login) Failed login attempt - Invalid password', {
+                logger.error('(userService.login) 로그인 실패 - 비밀번호 불일치', {
+                    error: "입력하신 비밀번호가 일치하지않습니다.",
                     userId: params.userId,
                     timestamp: new Date().toISOString(),
                     ip: params.ip || 'unknown'
@@ -68,16 +67,21 @@ const userService = {
             const result = tokenUtil.makeToken(userInfo);
             
             // 보안을 위한 로깅 - 성공적인 로그인
-            logger.info('(userService.login) Successful login', {
+            logger.info('(userService.login) 로그인 성공', {
                 userId: params.userId,
                 timestamp: new Date().toISOString(),
                 ip: params.ip || 'unknown'
             });
             
-            logger.debug('(userService.login)', params, result);
+            logger.debug('(userService.login) 로그인 디버그 정보', params, result);
             return result;
         } catch (err) {
-            logger.error('(userService.login)', err.toString());
+            logger.error('(userService.login) 로그인 처리 중 오류 발생', {
+                error: err.message,
+                userId: params?.userId,
+                timestamp: new Date().toISOString(),
+                ip: params?.ip || 'unknown'
+            });
             throw err;
         }
     },
@@ -105,14 +109,14 @@ const userService = {
             // 5. 비밀번호 업데이트
             await userDao.updatePassword(userId, hashedPassword);
 
-            logger.info('(userService.changePassword)', {
+            logger.info('(userService.changePassword) 비밀번호 변경 완료', {
                 userId,
                 timestamp: new Date().toISOString()
             });
 
             return { message: '비밀번호가 성공적으로 변경되었습니다.' };
         } catch (err) {
-            logger.error('(userService.changePassword)', {
+            logger.error('(userService.changePassword) 비밀번호 변경 실패', {
                 error: err.toString(),
                 userId
             });
@@ -148,7 +152,7 @@ const userService = {
             // 4. 사용자 정보 업데이트
             const updatedUser = await userDao.updateUser(userId, updateData);
 
-            logger.info('(userService.updateUserInfo)', {
+            logger.info('(userService.updateUserInfo) 회원정보 수정 완료', {
                 userId,
                 updatedFields: Object.keys(updateData),
                 timestamp: new Date().toISOString()
@@ -164,7 +168,7 @@ const userService = {
                 }
             };
         } catch (err) {
-            logger.error('(userService.updateUserInfo)', {
+            logger.error('(userService.updateUserInfo) 회원정보 수정 실패', {
                 error: err.toString(),
                 userId,
                 updateData
@@ -190,14 +194,14 @@ const userService = {
             // 3. 회원 탈퇴 처리
             await userDao.deleteUser(userId);
 
-            logger.info('(userService.withdrawUser)', {
+            logger.info('(userService.withdrawUser) 회원 탈퇴 완료', {
                 userId,
                 timestamp: new Date().toISOString()
             });
 
             return { message: '회원 탈퇴가 완료되었습니다.' };
         } catch (err) {
-            logger.error('(userService.withdrawUser)', {
+            logger.error('(userService.withdrawUser) 회원 탈퇴 실패', {
                 error: err.toString(),
                 userId
             });
@@ -205,37 +209,25 @@ const userService = {
         }
     },
 
-    async logout(userId) {
+    logout: async(userId, token) => {
         try {
-            // 1. 사용자 존재 여부 확인
-            const user = await userDao.findByUserId(userId);
-            if (!user) {
-                throw new AppError('사용자를 찾을 수 없습니다.', 404);
-            }
-
-            // 2. 현재 토큰을 블랙리스트에 추가
-            const token = req.headers.authorization?.split(' ')[1];
+            // 토큰 블랙리스트에 추가
             if (token) {
-                const decoded = await tokenUtil.verifyToken(token);
-                await tokenBlacklistDao.addToBlacklist(
-                    token,
-                    userId,
-                    new Date(decoded.exp * 1000) // JWT exp를 Date 객체로 변환
-                );
+                await tokenBlacklistDao.addToBlacklist(token, userId);
             }
 
-            logger.info('(userService.logout)', {
+            logger.info('(userService.logout) 로그아웃 성공', {
                 userId,
                 timestamp: new Date().toISOString()
             });
-
-            return { message: '로그아웃이 완료되었습니다.' };
+            return { message: '로그아웃되었습니다.' };
         } catch (err) {
-            logger.error('(userService.logout)', {
+            logger.error('(userService.logout) 로그아웃 실패', {
                 error: err.toString(),
-                userId
+                userId,
+                timestamp: new Date().toISOString()
             });
-            throw err;
+            throw new AppError('로그아웃 중 오류가 발생했습니다.', 500);
         }
     }
 };
