@@ -50,6 +50,22 @@ const passwordResetService = {
       });
       throw err;
     }
+  },
+  async requestPasswordResetHandler(req, res, next) {
+    try {
+      const { userId, email } = req.body;
+      const tokenUserId = req.user.userId;
+      if (userId !== tokenUserId) {
+        return res.status(403).json({ success: false, message: '권한이 없습니다.' });
+      }
+      if (!userId || !email) {
+        return res.status(400).json({ success: false, message: '아이디와 이메일을 모두 입력해주세요.' });
+      }
+      const result = await this.requestPasswordReset(userId, email);
+      res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      res.status(500).json({ success: false, message: '비밀번호 재설정 요청 중 오류가 발생했습니다.' });
+    }
   }
 };
 

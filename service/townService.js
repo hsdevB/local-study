@@ -32,6 +32,22 @@ const townService = {
       });
       throw err instanceof AppError ? err : new AppError('읍/면/동 목록 조회 중 오류가 발생했습니다.', 500);
     }
+  },
+  async fetchTownsByDistrictIdHandler(req, res) {
+    const { districtId } = req.params;
+    try {
+      const towns = await this.fetchTownsByDistrictId(districtId);
+      res.status(200).json({
+        success: true,
+        message: '읍/면/동 목록 조회 성공',
+        data: towns
+      });
+    } catch (err) {
+      res.status(500).json({
+        success: false,
+        message: '읍/면/동 목록 조회 중 오류가 발생했습니다.'
+      });
+    }
   }
 };
 

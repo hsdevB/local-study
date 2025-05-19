@@ -23,6 +23,21 @@ const categoryService = {
             });
             throw err instanceof AppError ? err : new AppError('카테고리 목록 조회 중 오류가 발생했습니다.', 500);
         }
+    },
+    getAllCategoriesHandler: async (req, res) => {
+        try {
+            const categories = await categoryService.getAllCategories();
+            res.status(200).json({
+                success: true,
+                message: '카테고리 목록 조회 성공',
+                data: categories
+            });
+        } catch (err) {
+            res.status(500).json({
+                success: false,
+                message: '카테고리 목록 조회 중 오류가 발생했습니다.'
+            });
+        }
     }
 };
 

@@ -199,23 +199,114 @@ const studyService = {
 
     getEndedStudies: async (req, res) => {
         try {
-            const studies = await studyDao.findEndedStudies();
-
-            logger.info('(studyService.getEndedStudies) 종료된 스터디 목록 조회 완료', {
-                resultCount: studies.length,
-                timestamp: new Date().toISOString()
+            const userId = req.user.userId;
+            const studies = await studyDao.getEndedStudies(userId);
+            
+            logger.info('(studyService.getEndedStudies)', {
+                userId,
+                count: studies.length
             });
 
             res.status(200).json({
                 success: true,
+                message: '종료된 스터디 조회 성공',
                 data: studies
             });
         } catch (err) {
-            logger.error('(studyService.getEndedStudies) 종료된 스터디 목록 조회 실패', {
+            logger.error('(studyService.getEndedStudies)', {
                 error: err.toString(),
-                timestamp: new Date().toISOString()
+                userId: req.user?.userId
             });
-            throw err;
+            throw new AppError('종료된 스터디 조회 중 오류가 발생했습니다.', 500);
+        }
+    },
+
+    async createStudyHandler(req, res) {
+        try {
+            if (!req.user) {
+                return res.status(401).json({ success: false, message: '로그인이 필요한 서비스입니다.' });
+            }
+            const studyData = { ...req.body, user_id: req.user.id };
+            const study = await this.createStudy(studyData);
+            res.status(201).json({ success: true, message: '스터디가 생성되었습니다.', data: study });
+        } catch (err) {
+            res.status(500).json({ success: false, message: '스터디 생성 중 오류가 발생했습니다.' });
+        }
+    },
+
+    async getStudiesHandler(req, res) {
+        try {
+            const { category_id, city_id, search } = req.query;
+            const where = {};
+            if (category_id) where.category_id = category_id;
+            if (city_id) where.city_id = city_id;
+            if (search) {
+                where[Op.or] = [
+                    { title: { [Op.like]: `%${search}%` } },
+                    { description: { [Op.like]: `%${search}%` } }
+                ];
+            }
+            const studies = await this.getStudies(where);
+            res.status(200).json({ success: true, data: studies });
+        } catch (err) {
+            res.status(500).json({ success: false, message: '스터디 목록 조회 중 오류가 발생했습니다.' });
+        }
+    },
+
+    async getStudyByIdHandler(req, res) {
+        try {
+            const { id } = req.params;
+            const study = await this.getStudyById(id);
+            if (!study) {
+                return res.status(404).json({ success: false, message: '존재하지 않는 스터디입니다.' });
+            }
+            res.status(200).json({ success: true, data: study });
+        } catch (err) {
+            res.status(500).json({ success: false, message: '스터디 상세 조회 중 오류가 발생했습니다.' });
+        }
+    },
+
+    async updateStudyHandler(req, res) {
+        try {
+            if (!req.user) {
+                return res.status(401).json({ success: false, message: '로그인이 필요한 서비스입니다.' });
+            }
+            const { id } = req.params;
+            const study = await this.getStudyByIdAndUserId(id, req.user.id);
+            if (!study) {
+                return res.status(404).json({ success: false, message: '존재하지 않는 스터디이거나 수정 권한이 없습니다.' });
+            }
+            const updatedStudy = await this.updateStudy(study, req.body);
+            res.status(200).json({ success: true, message: '스터디가 수정되었습니다.', data: updatedStudy });
+        } catch (err) {
+            res.status(500).json({ success: false, message: '스터디 수정 중 오류가 발생했습니다.' });
+        }
+    },
+
+    async deleteStudyHandler(req, res) {
+        try {
+            if (!req.user) {
+                return res.status(401).json({ success: false, message: '로그인이 필요한 서비스입니다.' });
+            }
+            const { id } = req.params;
+            const study = await this.getStudyByIdAndUserId(id, req.user.id);
+            if (!study) {
+                return res.status(404).json({ success: false, message: '존재하지 않는 스터디이거나 삭제 권한이 없습니다.' });
+            }
+            await this.deleteStudy(study);
+            res.status(200).json({ success: true, message: '스터디가 삭제되었습니다.' });
+        } catch (err) {
+            res.status(500).json({ success: false, message: '스터디 삭제 중 오류가 발생했습니다.' });
+        }
+    },
+
+    async getEndedStudiesHandler(req, res) {
+        try {
+            const userId = req.user.userId;
+            const studies = await this.getEndedStudies(userId);
+            res.status(200).json({ success: true, message: '종료된 스터디 조회 성공', data: studies });
+        } catch (err) {
+            res.status(500).json({ success: false, message: '종료된 스터디 조회 중 오류가 발생했습니다.' });
         }
     }
 };

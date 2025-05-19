@@ -7,6 +7,7 @@ import signupRouter from './signup.js';
 import userRouter from './user.js';
 import passwordResetRouter from './passwordReset.js';
 import studyRouter from './study.js';
+import studyApplicationRouter from './studyApplication.js';
 
 const router = express.Router();
 
@@ -23,4 +24,5 @@ router.use('/signup', signupRouter);
 router.use('/user', userRouter);
 router.use('/password-reset', passwordResetRouter);
 router.use('/study', studyRouter);
+router.use('/study-application', studyApplicationRouter);
 export default router;

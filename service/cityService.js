@@ -23,6 +23,21 @@ const cityService = {
       });
       throw err instanceof AppError ? err : new AppError('시/도 목록 조회 중 오류가 발생했습니다.', 500);
     }
+  },
+  async fetchAllCitiesHandler(req, res) {
+    try {
+      const cities = await this.fetchAllCities();
+      res.status(200).json({
+        success: true,
+        message: '시/도 목록 조회 성공',
+        data: cities
+      });
+    } catch (err) {
+      res.status(500).json({
+        success: false,
+        message: '시/도 목록 조회 중 오류가 발생했습니다.'
+      });
+    }
   }
 };
 

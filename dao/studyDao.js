@@ -242,6 +242,54 @@ const studyDao = {
             });
             throw new AppError('스터디 신청 조회 중 오류가 발생했습니다.', 500);
         }
+    },
+
+    getEndedStudies: async (userId) => {
+        try {
+            const studies = await Study.findAll({
+                where: {
+                    end_date: {
+                        [Op.lt]: new Date()
+                    },
+                    [Op.or]: [
+                        { user_id: userId },  // 사용자가 생성한 스터디
+                        { '$StudyApplications.user_id$': userId }  // 사용자가 신청한 스터디
+                    ]
+                },
+                include: [
+                    {
+                        model: User,
+                        as: 'User',
+                        attributes: ['userId', 'username']
+                    },
+                    {
+                        model: Category,
+                        as: 'Category',
+                        attributes: ['name']
+                    },
+                    {
+                        model: City,
+                        as: 'City',
+                        attributes: ['name']
+                    },
+                    {
+                        model: StudyApplication,
+                        as: 'StudyApplications',
+                        where: { user_id: userId },
+                        required: false
+                    }
+                ],
+                order: [['end_date', 'DESC']]
+            });
+
+            return studies;
+        } catch (err) {
+            logger.error('(studyDao.getEndedStudies)', {
+                error: err.toString(),
+                userId
+            });
+            throw new AppError('종료된 스터디 조회 중 오류가 발생했습니다.', 500);
+        }
     }
 };
 

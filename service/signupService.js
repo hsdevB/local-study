@@ -72,6 +72,39 @@ const signupService = {
             throw err;
         }
     },
+
+    async createUserHandler(req, res) {
+        try {
+            const params = {
+                userId: req.body.userId,
+                password: req.body.password,
+                username: req.body.username,
+                email: req.body.email,
+                phoneNumber: req.body.phoneNumber,
+                birthDate: req.body.birthDate,
+                gender: req.body.gender,
+            };
+            // 필수 입력값 검증
+            if (!params.userId || !params.password || !params.username || 
+                !params.email || !params.phoneNumber || !params.birthDate || !params.gender) {
+                return res.status(400).json({ success: false, message: '사용자 아이디, 비밀번호, 이름, 이메일, 전화번호, 생년월일, 성별은 필수 입력값입니다.' });
+            }
+            // 입력값 형식 검증
+            // (기존 validationUtil.validateUserId 등은 내부에서 호출)
+            const user = await this.createUser(params);
+            res.status(201).json({
+                success: true,
+                message: '회원가입이 완료되었습니다.',
+                data: {
+                    userId: user.userId,
+                    email: user.email,
+                    username: user.username
+                }
+            });
+        } catch (err) {
+            res.status(500).json({ success: false, message: '회원가입 처리 중 오류가 발생했습니다.' });
+        }
+    },
 };
 
 export default signupService;

@@ -32,6 +32,25 @@ const districtService = {
       });
       throw err instanceof AppError ? err : new AppError('시/군/구 목록 조회 중 오류가 발생했습니다.', 500);
     }
+  },
+  async fetchDistrictsByCityIdHandler(req, res) {
+    const { cityId } = req.params;
+    try {
+      if (!cityId) {
+        return res.status(400).json({ success: false, message: '시/도 ID는 필수 입력값입니다.' });
+      }
+      const districts = await this.fetchDistrictsByCityId(cityId);
+      res.status(200).json({
+        success: true,
+        message: '시/군/구 목록 조회 성공',
+        data: districts
+      });
+    } catch (err) {
+      res.status(500).json({
+        success: false,
+        message: '시/군/구 목록 조회 중 오류가 발생했습니다.'
+      });
+    }
   }
 };
 

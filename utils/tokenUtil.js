@@ -82,4 +82,21 @@ const tokenUtil = {
   }
 };
 
+// 인증 미들웨어
+export const authenticateToken = async (req, res, next) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            throw new AppError('인증 토큰이 필요합니다.', 401);
+        }
+
+        const token = authHeader.split(' ')[1];
+        const decoded = await tokenUtil.verifyToken(token);
+        req.user = decoded;
+        next();
+    } catch (err) {
+        next(new AppError('유효하지 않은 토큰입니다.', 401));
+    }
+};
+
 export default tokenUtil;

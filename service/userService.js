@@ -229,6 +229,76 @@ const userService = {
             });
             throw new AppError('로그아웃 중 오류가 발생했습니다.', 500);
         }
+    },
+
+    async loginHandler(req, res) {
+        try {
+            const { userId, password } = req.body;
+            if (!userId || !password) {
+                return res.status(400).json({ success: false, message: '사용자 ID와 비밀번호는 필수 입력값입니다.' });
+            }
+            const loginParams = {
+                userId,
+                password,
+                ip: req.ip,
+                userAgent: req.get('user-agent')
+            };
+            const result = await this.login(loginParams);
+            res.status(200).json({ success: true, message: '로그인 성공', data: result });
+        } catch (err) {
+            res.status(500).json({ success: false, message: '로그인 처리 중 오류가 발생했습니다.' });
+        }
+    },
+    async changePasswordHandler(req, res) {
+        try {
+            const { userId, currentPassword, newPassword } = req.body;
+            if (!userId || !currentPassword || !newPassword) {
+                return res.status(400).json({ success: false, message: '사용자 ID, 현재 비밀번호, 새 비밀번호는 필수 입력값입니다.' });
+            }
+            const result = await this.changePassword(userId, currentPassword, newPassword);
+            res.status(200).json({ success: true, message: result.message });
+        } catch (err) {
+            res.status(500).json({ success: false, message: '비밀번호 변경 중 오류가 발생했습니다.' });
+        }
+    },
+    async updateUserInfoHandler(req, res) {
+        try {
+            const { userId } = req.body;
+            const updateData = { ...req.body };
+            delete updateData.userId;
+            if (!userId) {
+                return res.status(400).json({ success: false, message: '사용자 ID는 필수 입력값입니다.' });
+            }
+            if (Object.keys(updateData).length === 0) {
+                return res.status(400).json({ success: false, message: '수정할 정보가 없습니다.' });
+            }
+            const result = await this.updateUserInfo(userId, updateData);
+            res.status(200).json({ success: true, message: result.message, data: result.data });
+        } catch (err) {
+            res.status(500).json({ success: false, message: '회원정보 수정 중 오류가 발생했습니다.' });
+        }
+    },
+    async withdrawUserHandler(req, res) {
+        try {
+            const { userId, password } = req.body;
+            if (!userId || !password) {
+                return res.status(400).json({ success: false, message: '사용자 ID와 비밀번호는 필수 입력값입니다.' });
+            }
+            const result = await this.withdrawUser(userId, password);
+            res.status(200).json({ success: true, message: result.message });
+        } catch (err) {
+            res.status(500).json({ success: false, message: '회원 탈퇴 중 오류가 발생했습니다.' });
+        }
+    },
+    async logoutHandler(req, res, next) {
+        try {
+            const { userId } = req.user;
+            const token = req.headers.authorization?.split(' ')[1];
+            await this.logout(userId, token);
+            res.status(200).json({ success: true, message: '로그아웃되었습니다.' });
+        } catch (err) {
+            next(err);
+        }
     }
 };
 
