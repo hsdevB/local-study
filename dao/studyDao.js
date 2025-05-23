@@ -336,6 +336,28 @@ const studyDao = {
             });
             throw new AppError('종료된 스터디 조회 중 오류가 발생했습니다.', 500);
         }
+    },
+
+    // 승인된(approved) 참여자만 반환
+    findApprovedParticipants: async (studyId) => {
+        try {
+            const applications = await StudyApplication.findAll({
+                where: { study_id: studyId, status: 'approved' },
+                include: [{
+                    model: User,
+                    as: 'User',
+                    attributes: ['id', 'userId', 'nickname']
+                }]
+            });
+            return applications;
+        } catch (err) {
+            logger.error('(studyDao.findApprovedParticipants) 승인된 참여자 조회 실패', {
+                error: err.toString(),
+                studyId,
+                timestamp: new Date().toISOString()
+            });
+            throw new AppError('승인된 참여자 조회 중 오류가 발생했습니다.', 500);
+        }
     }
 };
 

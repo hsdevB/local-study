@@ -278,7 +278,6 @@ const studyService = {
                     City: study.City,
                     District: study.District,
                     Town: study.Town,
-                    thumbnail: study.StudyThumbnails?.[0]?.path || null
                 };
             });
 
@@ -322,7 +321,45 @@ const studyService = {
                 });
             }
 
-            let responseData = { study };
+            // study 객체를 JSON으로 변환
+            let studyObj = study.toJSON();
+
+            // _id 필드 제거
+            delete studyObj.district_id;
+            delete studyObj.town_id;
+            delete studyObj.user_id;
+            delete studyObj.category_id;
+            delete studyObj.city_id;
+
+            // current_participants 기본값 보정
+            if (!studyObj.current_participants || studyObj.current_participants < 1) {
+                studyObj.current_participants = 1;
+            }
+
+            // 승인된 참여자 조회
+            const approvedApps = await studyDao.findApprovedParticipants(studyObj.id);
+            let participants = approvedApps.map(app => ({
+                id: app.User.id,
+                userId: app.User.userId,
+                nickname: app.User.nickname,
+                isAuthor: false
+            }));
+            // 작성자 정보 추가 (중복 방지)
+            if (!participants.some(p => p.id === studyObj.User.id)) {
+                participants.unshift({
+                    id: studyObj.User.id,
+                    userId: studyObj.User.userId,
+                    nickname: studyObj.User.nickname,
+                    isAuthor: true
+                });
+            } else {
+                participants = participants.map(p =>
+                    p.id === studyObj.User.id ? { ...p, isAuthor: true } : p
+                );
+            }
+            studyObj.participants = participants;
+
+            let responseData = { study: studyObj };
 
             if (req.user) {
                 const application = await studyDao.findStudyApplication(id, req.user.id);
