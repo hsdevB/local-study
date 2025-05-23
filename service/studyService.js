@@ -2,6 +2,13 @@ import studyDao from '../dao/studyDao.js';
 import logger from '../utils/logger.js';
 import { AppError } from '../utils/errorHandler.js';
 import { Op } from 'sequelize';
+import fs from 'fs';
+import path from 'path';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const studyService = {
     createStudy: async (req, res) => {
@@ -12,14 +19,37 @@ const studyService = {
 
             const studyData = {
                 ...req.body,
-                user_id: req.user.id
+                user_id: req.user.id,
+                city_id: req.body.city_id,
+                district_id: req.body.district_id,
+                town_id: req.body.town_id
             };
 
-            const study = await studyDao.createStudy(studyData);
+            // 썸네일이 없을 경우 기본 이미지 사용
+            // const thumbnailFile = req.file || {
+            //     filename: 'basicImage.jpg',
+            //     path: 'public/images/basicImage.jpg',
+            //     mimetype: 'image/jpeg',
+            //     size: 0
+            // };
+
+            let thumbnailFile = req.file;
+            if (!thumbnailFile) {
+                thumbnailFile = {
+                    filename: 'logo.png',
+                    path: '/images/logo.png',
+                    mimetype: 'image/png',
+                    size: 0
+                };
+            }
+
+            const study = await studyDao.createStudy(studyData, thumbnailFile);
 
             logger.info('(studyService.createStudy) 스터디 생성 완료', {
                 studyId: study.id,
                 userId: req.user.id,
+                hasThumbnail: !!req.file,
+                isDefaultImage: !req.file,
                 timestamp: new Date().toISOString()
             });
 
@@ -222,39 +252,6 @@ const studyService = {
         }
     },
 
-    async createStudyHandler(req, res) {
-        try {
-            if (!req.user) {
-                return res.status(401).json({ success: false, message: '로그인이 필요한 서비스입니다.' });
-            }
-            const studyData = {
-                ...req.body,
-                user_id: req.user.id
-            };
-
-            const study = await studyDao.createStudy(studyData);
-
-            logger.info('(studyService.createStudyHandler) 스터디 생성 완료', {
-                studyId: study.id,
-                userId: req.user.id,
-                timestamp: new Date().toISOString()
-            });
-
-            res.status(201).json({
-                success: true,
-                message: '스터디가 생성되었습니다.',
-                data: study
-            });
-        } catch (err) {
-            logger.error('(studyService.createStudyHandler) 스터디 생성 실패', {
-                error: err.toString(),
-                userId: req.user?.id,
-                timestamp: new Date().toISOString()
-            });
-            res.status(500).json({ success: false, message: '스터디 생성 중 오류가 발생했습니다.' });
-        }
-    },
-
     async getStudiesHandler(req, res) {
         try {
             const { category_id, city_id, search, status } = req.query || {};
@@ -272,6 +269,19 @@ const studyService = {
 
             const studies = await studyDao.findStudies(where);
 
+            // 응답 데이터 가공
+            const formattedStudies = studies.map(study => {
+                const { category_id, city_id, ...rest } = study.toJSON();
+                return {
+                    ...rest,
+                    Category: study.Category,
+                    City: study.City,
+                    District: study.District,
+                    Town: study.Town,
+                    thumbnail: study.StudyThumbnails?.[0]?.path || null
+                };
+            });
+
             logger.info('(studyService.getStudiesHandler) 스터디 목록 조회 완료', {
                 resultCount: studies.length,
                 timestamp: new Date().toISOString()
@@ -280,12 +290,13 @@ const studyService = {
             res.status(200).json({
                 success: true,
                 message: studies.length === 0 ? '등록된 스터디가 없습니다.' : '스터디 목록 조회 성공',
-                data: studies || []
+                data: formattedStudies
             });
         } catch (err) {
             logger.error('(studyService.getStudiesHandler) 스터디 목록 조회 실패', {
                 error: err.toString(),
                 errorMessage: err.message,
+                stack: err.stack,
                 timestamp: new Date().toISOString()
             });
             res.status(500).json({ 
@@ -451,5 +462,62 @@ const studyService = {
         }
     }
 };
+
+export async function createStudyHandler(req, res) {
+    try {
+        if (!req.user) {
+            throw new AppError('로그인이 필요한 서비스입니다.', 401);
+        }
+
+        // 필수 지역 정보 검증
+        if (!req.body.city_id) {
+            throw new AppError('시/도 정보는 필수입니다.', 400);
+        }
+
+        const studyData = {
+            ...req.body,
+            user_id: req.user.id,
+            city_id: req.body.city_id,
+            district_id: req.body.district_id || null,
+            town_id: req.body.town_id || null
+        };
+
+        let thumbnailFile = req.file;
+        if (!thumbnailFile) {
+            thumbnailFile = {
+                filename: 'logo.png',
+                path: '/images/logo.png',
+                mimetype: 'image/png',
+                size: 0
+            };
+        }
+
+        const study = await studyDao.createStudy(studyData, thumbnailFile);
+
+        logger.info('(studyService.createStudyHandler) 스터디 생성 완료', {
+            studyId: study.id,
+            userId: req.user.id,
+            cityId: studyData.city_id,
+            districtId: studyData.district_id,
+            townId: studyData.town_id,
+            hasThumbnail: !!req.file,
+            isDefaultImage: !req.file,
+            timestamp: new Date().toISOString()
+        });
+
+        res.status(201).json({
+            success: true,
+            message: '스터디가 생성되었습니다.',
+            data: study
+        });
+    } catch (err) {
+        logger.error('(studyService.createStudyHandler) 스터디 생성 실패', {
+            error: err.toString(),
+            userId: req.user?.id,
+            timestamp: new Date().toISOString()
+        });
+        res.status(500).json({ success: false, message: '스터디 생성 중 오류가 발생했습니다.' });
+    }
+}
 
 export default studyService; 

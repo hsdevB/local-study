@@ -3,19 +3,22 @@ import { DataTypes, Model } from 'sequelize';
 class StudyThumbnail extends Model {
   static init(sequelize) {
     return super.init({
-        title: {
+        filename: {
           type: DataTypes.STRING(255),
           allowNull: false,
         },
         path: {
           type: DataTypes.STRING(255),
+          allowNull: false,
         },
         size: {
-          type: DataTypes.INTEGER(),
+          type: DataTypes.INTEGER,
+          allowNull: false,
         },
-        ext: {
-          type: DataTypes.STRING(50),
-        },
+        mimetype: {
+          type: DataTypes.STRING(100),
+          allowNull: false,
+        }
     }, {
         sequelize,
         underscored: true,

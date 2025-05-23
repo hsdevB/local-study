@@ -16,7 +16,7 @@ const tokenUtil = {
       const payload = {
         id: user.id,
         userId: user.userId,
-        username: user.username,
+        nickname: user.nickname,
         email: user.email
       };
 

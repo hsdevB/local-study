@@ -1,14 +1,24 @@
 import User from '../models/user.js';
 import logger from '../utils/logger.js';
 import { AppError } from '../utils/errorHandler.js';
+import models from '../models/index.js';
 
 const userDao = {
-    selectUser: async(params) => {
+    async selectUser(params) {
         try {
-            const user = await User.findOne({ 
-                where: { userId: params.userId },
-                attributes: ['id', 'nickname', 'email', 'username', 'createdAt', 'updatedAt']
+            const user = await models.User.findOne({
+                where: {
+                    userId: params.userId
+                },
+                attributes: ['id', 'userId', 'password', 'nickname', 'email', 'phoneNumber', 'birthDate', 'gender']
             });
+
+            logger.info('(userDao.selectUser) 사용자 조회 완료', {
+                userId: params.userId,
+                found: !!user,
+                timestamp: new Date().toISOString()
+            });
+
             return user;
         } catch (err) {
             logger.error('(userDao.selectUser) 사용자 조회 실패', {
@@ -16,7 +26,7 @@ const userDao = {
                 userId: params.userId,
                 timestamp: new Date().toISOString()
             });
-            throw new AppError('사용자 조회 중 오류가 발생했습니다.', 500);
+            throw err;
         }
     },
     
@@ -24,7 +34,7 @@ const userDao = {
         try {
             const user = await User.findOne({ 
                 where: { userId },
-                attributes: ['id', 'nickname', 'email', 'username', 'phoneNumber', 'birthDate', 'gender']
+                attributes: ['id', 'userId', 'nickname', 'email', 'phoneNumber', 'birthDate', 'gender']
             });
             return user;
         } catch (err) {

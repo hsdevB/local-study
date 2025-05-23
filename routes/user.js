@@ -1,8 +1,9 @@
 import express from 'express';
 import userService from '../service/userService.js';
-import { authenticateToken } from '../utils/tokenUtil.js';
+import { verifyToken } from '../middleware/authMiddleware.js';
 import tokenUtil from '../utils/tokenUtil.js';
 import tokenBlacklistDao from '../dao/tokenBlacklistDao.js';
+import logger from '../utils/logger.js';
 
 const userRouter = express.Router();
 
@@ -10,13 +11,13 @@ const userRouter = express.Router();
 userRouter.post('/login', userService.loginHandler.bind(userService));
 
 // 비밀번호 변경 라우트
-userRouter.put('/password', userService.changePasswordHandler.bind(userService));
+userRouter.put('/password', verifyToken, userService.changePasswordHandler.bind(userService));
 
 // 회원정보 수정 라우트
-userRouter.put('/info', userService.updateUserInfoHandler.bind(userService));
+userRouter.put('/info', verifyToken, userService.updateUserInfoHandler.bind(userService));
 
 // 회원 탈퇴 라우트
-userRouter.delete('/withdraw', userService.withdrawUserHandler.bind(userService));
+userRouter.delete('/withdraw', verifyToken, userService.withdrawUserHandler.bind(userService));
 
 // 토큰 갱신 라우트
 userRouter.post('/refresh-token', async (req, res) => {
@@ -60,6 +61,9 @@ userRouter.post('/refresh-token', async (req, res) => {
 });
 
 // 로그아웃 라우트
-userRouter.post('/logout', authenticateToken, userService.logoutHandler.bind(userService));
+userRouter.post('/logout', verifyToken, userService.logoutHandler.bind(userService));
+
+// 프로필 조회 라우트
+userRouter.get('/profile', verifyToken, userService.getUserProfile.bind(userService));
 
 export default userRouter;

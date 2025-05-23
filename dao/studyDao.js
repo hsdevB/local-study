@@ -3,18 +3,33 @@ import Category from '../models/category.js';
 import City from '../models/city.js';
 import User from '../models/user.js';
 import StudyApplication from '../models/studyApplication.js';
+import StudyThumbnail from '../models/studyThumbnail.js';
+import District from '../models/district.js';
+import Town from '../models/town.js';
 import { Op } from 'sequelize';
 import logger from '../utils/logger.js';
 import { AppError } from '../utils/errorHandler.js';
 
 const studyDao = {
-    createStudy: async (studyData) => {
+    createStudy: async (studyData, thumbnailFile) => {
         try {
             const study = await Study.create(studyData);
+            
+            // 썸네일 이미지가 있는 경우 처리
+            if (thumbnailFile) {
+                await StudyThumbnail.create({
+                    study_id: study.id,
+                    filename: thumbnailFile.filename,
+                    path: thumbnailFile.path,
+                    size: thumbnailFile.size,
+                    mimetype: thumbnailFile.mimetype
+                });
+            }
             
             logger.info('(studyDao.createStudy) 스터디 생성 완료', {
                 studyId: study.id,
                 userId: studyData.user_id,
+                hasThumbnail: !!thumbnailFile,
                 timestamp: new Date().toISOString()
             });
 
@@ -48,6 +63,21 @@ const studyDao = {
                         model: User,
                         as: 'User',
                         attributes: ['userId', 'nickname']
+                    },
+                    {
+                        model: District,
+                        as: 'District',
+                        attributes: ['id', 'name']
+                    },
+                    {
+                        model: Town,
+                        as: 'Town',
+                        attributes: ['id', 'name']
+                    },
+                    {
+                        model: StudyThumbnail,
+                        as: 'StudyThumbnails',
+                        attributes: ['path']
                     }
                 ],
                 order: [['created_at', 'DESC']],
@@ -64,6 +94,7 @@ const studyDao = {
             logger.error('(studyDao.findStudies) 스터디 목록 조회 실패', {
                 error: err.toString(),
                 errorMessage: err.message,
+                stack: err.stack,
                 timestamp: new Date().toISOString()
             });
             throw new AppError('스터디 목록 조회 중 오류가 발생했습니다.', 500);
@@ -84,9 +115,24 @@ const studyDao = {
                         as: 'City'
                     },
                     {
+                        model: District,
+                        as: 'District',
+                        attributes: ['id', 'name']
+                    },
+                    {
+                        model: Town,
+                        as: 'Town',
+                        attributes: ['id', 'name']
+                    },
+                    {
                         model: User,
                         as: 'User',
                         attributes: ['userId', 'nickname']
+                    },
+                    {
+                        model: StudyThumbnail,
+                        as: 'StudyThumbnails',
+                        attributes: ['path']
                     }
                 ]
             });

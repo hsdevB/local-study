@@ -9,6 +9,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { errorHandler } from './utils/errorHandler.js';
+import cookieParser from 'cookie-parser';
 
 import indexRouter from './routes/index.js';
 
@@ -25,10 +26,15 @@ app.use(helmet());
 
 // CORS 설정
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: 'http://localhost:5173', // 프론트엔드 주소
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Set-Cookie'],
+    credentials: true // 쿠키 전송을 위해 필요
 }));
+
+// 쿠키 파서 미들웨어 추가
+app.use(cookieParser());
 
 // Rate limiting 설정
 const limiter = rateLimit({
@@ -76,6 +82,7 @@ app.use((req, res, next) => {
     next();
 });
 
+// 라우터 설정
 app.use('/', indexRouter);
 
 // 데이터베이스 연결 및 마이그레이션 실행
@@ -108,7 +115,7 @@ app.use(function(err, req, res, next) {
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
-
+  console.error(err.stack);
   // render the error page
   res.status(err.status || 500);
   res.render('error');

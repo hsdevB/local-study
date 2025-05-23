@@ -37,12 +37,6 @@ const userService = {
             if (!userInfo) {
                 const err = new Error(`${params.userId} 의 계정정보가 존재하지 않습니다.`);
                 logger.error('(userService.login) 로그인 실패 - 존재하지 않는 계정', err.toString());
-                // 보안을 위한 로깅 - 존재하지 않는 계정 로그인 시도
-                logger.warn('(userService.login) 로그인 실패 - 존재하지 않는 계정', {
-                    userId: params.userId,
-                    timestamp: new Date().toISOString(),
-                    ip: params.ip || 'unknown'
-                });
                 throw err;
             }
 
@@ -64,7 +58,7 @@ const userService = {
             }
 
             // 3. jwt 토큰 발급
-            const result = tokenUtil.makeToken(userInfo);
+            const result = await tokenUtil.makeToken(userInfo);
             
             // 보안을 위한 로깅 - 성공적인 로그인
             logger.info('(userService.login) 로그인 성공', {
@@ -73,8 +67,11 @@ const userService = {
                 ip: params.ip || 'unknown'
             });
             
-            logger.debug('(userService.login) 로그인 디버그 정보', params, result);
-            return result;
+            return {
+                token: result,
+                userId: userInfo.userId,
+                nickname: userInfo.nickname
+            };
         } catch (err) {
             logger.error('(userService.login) 로그인 처리 중 오류 발생', {
                 error: err.message,
@@ -234,19 +231,58 @@ const userService = {
     async loginHandler(req, res) {
         try {
             const { userId, password } = req.body;
+            
+            // 입력값 검증
             if (!userId || !password) {
-                return res.status(400).json({ success: false, message: '사용자 ID와 비밀번호는 필수 입력값입니다.' });
+                logger.warn('(userService.loginHandler) 로그인 실패 - 필수 입력값 누락', {
+                    userId: userId || 'not provided',
+                    timestamp: new Date().toISOString()
+                });
+                return res.status(400).json({ 
+                    success: false, 
+                    message: '사용자 ID와 비밀번호는 필수 입력값입니다.' 
+                });
             }
+
             const loginParams = {
                 userId,
                 password,
                 ip: req.ip,
                 userAgent: req.get('user-agent')
             };
+
+            logger.info('(userService.loginHandler) 로그인 시도', {
+                userId,
+                timestamp: new Date().toISOString(),
+                ip: req.ip
+            });
+
             const result = await this.login(loginParams);
-            res.status(200).json({ success: true, message: '로그인 성공', data: result });
+
+            res.status(200).json({ 
+                success: true, 
+                message: '로그인 성공', 
+                data: {
+                    token: result.token,
+                    userId: result.userId,
+                    nickname: result.nickname
+                }
+            });
         } catch (err) {
-            res.status(500).json({ success: false, message: '로그인 처리 중 오류가 발생했습니다.' });
+            logger.error('(userService.loginHandler) 로그인 처리 중 오류 발생', {
+                error: err.message,
+                stack: err.stack,
+                timestamp: new Date().toISOString()
+            });
+
+            // 클라이언트에 적절한 에러 메시지 전달
+            const statusCode = err.status || 500;
+            const message = err.message || '로그인 처리 중 오류가 발생했습니다.';
+            
+            res.status(statusCode).json({ 
+                success: false, 
+                message: message 
+            });
         }
     },
     async changePasswordHandler(req, res) {
@@ -298,6 +334,33 @@ const userService = {
             res.status(200).json({ success: true, message: '로그아웃되었습니다.' });
         } catch (err) {
             next(err);
+        }
+    },
+    getUserProfile: async (req, res) => {
+        try {
+            if (!req.user) {
+                // 반드시 응답을 내려줌
+                return res.status(401).json({ success: false, message: '로그인이 필요한 서비스입니다.' });
+            }
+            const user = await userDao.findByUserId(req.user.userId);
+            if (!user) {
+                return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' });
+            }
+            res.status(200).json({
+                success: true,
+                data: {
+                    id: user.id,
+                    userId: user.userId,
+                    nickname: user.nickname,
+                    email: user.email,
+                    phoneNumber: user.phoneNumber,
+                    birthDate: user.birthDate,
+                    gender: user.gender
+                }
+            });
+        } catch (err) {
+            // 반드시 에러 응답을 내려줌
+            res.status(500).json({ success: false, message: '프로필 조회 중 오류가 발생했습니다.' });
         }
     }
 };

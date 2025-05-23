@@ -28,6 +28,14 @@ class Study extends Model {
           type: DataTypes.INTEGER(),
           defaultValue: 1
         },
+        district_id: {
+          type: DataTypes.INTEGER,
+          allowNull: true,
+        },
+        town_id: {
+          type: DataTypes.INTEGER,
+          allowNull: true,
+        },
       },
       {
         sequelize,
@@ -51,6 +59,18 @@ class Study extends Model {
       targetKey: 'id',
       onDelete: 'CASCADE',
       as: 'City',
+    });
+    this.belongsTo(db.District, {
+      foreignKey: 'district_id',
+      targetKey: 'id',
+      onDelete: 'CASCADE',
+      as: 'District',
+    });
+    this.belongsTo(db.Town, {
+      foreignKey: 'town_id',
+      targetKey: 'id',
+      onDelete: 'CASCADE',
+      as: 'Town',
     });
     this.belongsTo(db.User, {
       foreignKey: 'user_id',
