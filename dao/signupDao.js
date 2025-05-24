@@ -16,7 +16,6 @@ const signupDao = {
                 id: user.id,
                 nickname: user.nickname,
                 email: user.email,
-                username: user.username,
                 createdAt: user.createdAt
             };
         } catch (err) {

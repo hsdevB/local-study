@@ -2,6 +2,10 @@ import signupDao from '../dao/signupDao.js';
 import hashUtil from '../utils/hashUtil.js';
 import logger from '../utils/logger.js';
 import { AppError } from '../utils/errorHandler.js';
+import nodemailer from 'nodemailer'
+
+// 인증 코드 임시 저장 (실서비스는 Redis 등 사용 권장)
+const emailCodeStore = {}
 
 const signupService = {
     async createUser(params) {
@@ -78,16 +82,16 @@ const signupService = {
             const params = {
                 userId: req.body.userId,
                 password: req.body.password,
-                username: req.body.username,
+                nickname: req.body.nickname,
                 email: req.body.email,
                 phoneNumber: req.body.phoneNumber,
                 birthDate: req.body.birthDate,
                 gender: req.body.gender,
             };
             // 필수 입력값 검증
-            if (!params.userId || !params.password || !params.username || 
+            if (!params.userId || !params.password || !params.nickname || 
                 !params.email || !params.phoneNumber || !params.birthDate || !params.gender) {
-                return res.status(400).json({ success: false, message: '사용자 아이디, 비밀번호, 이름, 이메일, 전화번호, 생년월일, 성별은 필수 입력값입니다.' });
+                return res.status(400).json({ success: false, message: '사용자 아이디, 비밀번호, 닉네임, 이메일, 전화번호, 생년월일, 성별은 필수 입력값입니다.' });
             }
             // 입력값 형식 검증
             // (기존 validationUtil.validateUserId 등은 내부에서 호출)
@@ -98,11 +102,84 @@ const signupService = {
                 data: {
                     userId: user.userId,
                     email: user.email,
-                    username: user.username
+                    nickname: user.nickname
                 }
             });
         } catch (err) {
             res.status(500).json({ success: false, message: '회원가입 처리 중 오류가 발생했습니다.' });
+        }
+    },
+    async checkUserId(req, res) {
+        try {
+            const { userId } = req.query;
+            if (!userId) {
+                return res.status(400).json({ success: false, message: 'userId는 필수입니다.' });
+            }
+            const user = await signupDao.findByUserId(userId);
+            res.status(200).json({ success: true, available: !user });
+        } catch (err) {
+            res.status(500).json({ success: false, message: '아이디 중복 검사 중 오류가 발생했습니다.' });
+        }
+    },
+    async checkEmail(req, res) {
+        try {
+            const { email } = req.query;
+            if (!email) {
+                return res.status(400).json({ success: false, message: 'email은 필수입니다.' });
+            }
+            const user = await signupDao.findByEmail(email);
+            res.status(200).json({ success: true, available: !user });
+        } catch (err) {
+            res.status(500).json({ success: false, message: '이메일 중복 검사 중 오류가 발생했습니다.' });
+        }
+    },
+    async sendEmailCode(req, res) {
+        try {
+            const { email } = req.body;
+            if (!email) {
+                return res.status(400).json({ success: false, message: 'email은 필수입니다.' });
+            }
+            // 이미 가입된 이메일인지 확인
+            const user = await signupDao.findByEmail(email);
+            if (user) {
+                return res.status(400).json({ success: false, message: '이미 회원가입된 이메일입니다.' });
+            }
+            // 인증 코드 생성 (6자리 숫자)
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            emailCodeStore[email] = code;
+            // Nodemailer로 이메일 발송
+            const transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_PASSWORD
+                }
+            });
+            await transporter.sendMail({
+                from: process.env.EMAIL_USER,
+                to: email,
+                subject: '[LocalStudy] 이메일 인증 코드',
+                text: `인증 코드: ${code}`
+            });
+            res.status(200).json({ success: true, message: '인증 코드가 이메일로 발송되었습니다.' });
+        } catch (err) {
+            res.status(500).json({ success: false, message: '이메일 인증 코드 발송 중 오류가 발생했습니다.' });
+        }
+    },
+    async verifyEmailCode(req, res) {
+        try {
+            const { email, code } = req.body;
+            if (!email || !code) {
+                return res.status(400).json({ success: false, message: 'email과 code는 필수입니다.' });
+            }
+            if (emailCodeStore[email] && emailCodeStore[email] === code) {
+                delete emailCodeStore[email]; // 인증 성공 시 삭제
+                return res.status(200).json({ success: true, message: '이메일 인증이 완료되었습니다.' });
+            } else {
+                return res.status(400).json({ success: false, message: '인증 코드가 올바르지 않습니다.' });
+            }
+        } catch (err) {
+            res.status(500).json({ success: false, message: '이메일 인증 코드 검증 중 오류가 발생했습니다.' });
         }
     },
 };

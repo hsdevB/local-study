@@ -18,10 +18,6 @@ class User extends Model {
           type: DataTypes.STRING(255),
           allowNull: false,
         },
-        username: {
-          type: DataTypes.STRING(50),
-          allowNull: false,
-        },
         email: {
           type: DataTypes.STRING(50),
           allowNull: false,
@@ -36,7 +32,7 @@ class User extends Model {
           type: DataTypes.STRING(20),
         },
         birthDate: {
-          type: DataTypes.INTEGER(),
+          type: DataTypes.STRING(20),
         },
         gender: {
           type: DataTypes.STRING(20),
@@ -44,7 +40,7 @@ class User extends Model {
         nickname: {
           type: DataTypes.STRING,
           allowNull: false,
-          defaultValue: 'user',
+          defaultValue: '유저',
           unique: {
             args: true,
             where: {

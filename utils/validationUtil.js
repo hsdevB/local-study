@@ -8,9 +8,9 @@ const validationUtil = {
         }
 
         // 최소 하나의 대문자
-        if (!/[A-Z]/.test(password)) {
-            throw new AppError('비밀번호는 최소 하나의 대문자를 포함해야 합니다.', 400);
-        }
+        // if (!/[A-Z]/.test(password)) {
+        //     throw new AppError('비밀번호는 최소 하나의 대문자를 포함해야 합니다.', 400);
+        // }
 
         // 최소 하나의 소문자
         if (!/[a-z]/.test(password)) {
