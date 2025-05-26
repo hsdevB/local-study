@@ -420,7 +420,19 @@ const studyService = {
                 return res.status(404).json({ success: false, message: '존재하지 않는 스터디이거나 수정 권한이 없습니다.' });
             }
 
-            const updatedStudy = await studyDao.updateStudy(study, req.body);
+            // 업데이트할 데이터 준비
+            const updateData = {
+                ...req.body,
+                city_id: req.body.city_id,
+                district_id: req.body.district_id,
+                town_id: req.body.town_id,
+                max_participants: req.body.max_participants
+            };
+
+            const updatedStudy = await studyDao.updateStudy(study, updateData);
+
+            // 업데이트된 스터디 정보를 다시 조회하여 관련 정보 포함
+            const studyWithDetails = await studyDao.findStudyById(id);
 
             logger.info('(studyService.updateStudyHandler) 스터디 수정 완료', {
                 studyId: id,
@@ -431,7 +443,7 @@ const studyService = {
             res.status(200).json({
                 success: true,
                 message: '스터디가 수정되었습니다.',
-                data: updatedStudy
+                data: studyWithDetails
             });
         } catch (err) {
             logger.error('(studyService.updateStudyHandler) 스터디 수정 실패', {
@@ -486,30 +498,50 @@ const studyService = {
 
     async getEndedStudiesHandler(req, res) {
         try {
-            if (!req.user) {
-                return res.status(401).json({ success: false, message: '로그인이 필요한 서비스입니다.' });
+            await this.getEndedStudies(req, res);
+        } catch (err) {
+            next(err);
+        }
+    },
+
+    async getMyStudiesHandler(req, res) {
+        try {
+            if (!req.user || !req.user.id) {
+                logger.error('(studyService.getMyStudiesHandler) 인증되지 않은 사용자', {
+                    timestamp: new Date().toISOString()
+                });
+                return res.status(401).json({ message: '인증이 필요합니다.' });
             }
-            const userId = req.user.id;
-            const studies = await studyDao.getEndedStudies(userId);
-            
-            logger.info('(studyService.getEndedStudiesHandler) 종료된 스터디 조회 완료', {
-                userId,
-                count: studies.length,
+
+            logger.info('(studyService.getMyStudiesHandler) 내가 만든 스터디 조회 시작', {
+                userId: req.user.id,
                 timestamp: new Date().toISOString()
             });
 
-            res.status(200).json({
-                success: true,
-                message: '종료된 스터디 조회 성공',
-                data: studies
+            const studies = await studyDao.findStudiesByUserId(req.user.id);
+            
+            logger.info('(studyService.getMyStudiesHandler) 내가 만든 스터디 조회 완료', {
+                userId: req.user.id,
+                studyCount: studies.length,
+                timestamp: new Date().toISOString()
             });
-        } catch (err) {
-            logger.error('(studyService.getEndedStudiesHandler) 종료된 스터디 조회 실패', {
-                error: err.toString(),
+
+            return res.status(200).json({
+                message: '내가 만든 스터디 목록을 성공적으로 가져왔습니다.',
+                studies: studies
+            });
+        } catch (error) {
+            logger.error('(studyService.getMyStudiesHandler) 내가 만든 스터디 조회 실패', {
+                error: error.toString(),
+                errorMessage: error.message,
+                errorStack: error.stack,
                 userId: req.user?.id,
                 timestamp: new Date().toISOString()
             });
-            res.status(500).json({ success: false, message: '종료된 스터디 조회 중 오류가 발생했습니다.' });
+            return res.status(500).json({ 
+                message: '내가 만든 스터디 목록을 가져오는데 실패했습니다.',
+                error: error.message 
+            });
         }
     },
 

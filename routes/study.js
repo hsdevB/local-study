@@ -11,6 +11,9 @@ studyRouter.post('/', verifyToken, upload.single('thumbnail'), handleUploadError
 // 스터디 목록 조회
 studyRouter.get('/', studyService.getStudiesHandler.bind(studyService));
 
+// 내가 만든 스터디 조회
+studyRouter.get('/my', verifyToken, studyService.getMyStudiesHandler.bind(studyService));
+
 // 스터디 상세 조회
 studyRouter.get('/:id', studyService.getStudyByIdHandler.bind(studyService));
 

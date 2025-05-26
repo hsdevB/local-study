@@ -108,11 +108,13 @@ const studyDao = {
                 include: [
                     {
                         model: Category,
-                        as: 'Category'
+                        as: 'Category',
+                        attributes: ['id', 'name']
                     },
                     {
                         model: City,
-                        as: 'City'
+                        as: 'City',
+                        attributes: ['id', 'name']
                     },
                     {
                         model: District,
@@ -181,11 +183,31 @@ const studyDao = {
 
     updateStudy: async (study, updateData) => {
         try {
-            const updatedStudy = await study.update(updateData);
+            // 업데이트할 필드만 추출
+            const fieldsToUpdate = {
+                title: updateData.title,
+                description: updateData.description,
+                max_participants: updateData.max_participants,
+                start_date: updateData.start_date,
+                end_date: updateData.end_date,
+                city_id: updateData.city_id,
+                district_id: updateData.district_id,
+                town_id: updateData.town_id,
+                category_id: updateData.category_id
+            };
+
+            // undefined나 null인 필드는 제외
+            Object.keys(fieldsToUpdate).forEach(key => {
+                if (fieldsToUpdate[key] === undefined || fieldsToUpdate[key] === null) {
+                    delete fieldsToUpdate[key];
+                }
+            });
+
+            const updatedStudy = await study.update(fieldsToUpdate);
 
             logger.info('(studyDao.updateStudy) 스터디 수정 완료', {
                 studyId: study.id,
-                updatedFields: Object.keys(updateData),
+                updatedFields: Object.keys(fieldsToUpdate),
                 timestamp: new Date().toISOString()
             });
 
@@ -357,6 +379,73 @@ const studyDao = {
                 timestamp: new Date().toISOString()
             });
             throw new AppError('승인된 참여자 조회 중 오류가 발생했습니다.', 500);
+        }
+    },
+
+    async findStudiesByUserId(userId) {
+        try {
+            logger.info('(studyDao.findStudiesByUserId) 내가 만든 스터디 조회 시작', {
+                userId,
+                timestamp: new Date().toISOString()
+            });
+
+            const studies = await Study.findAll({
+                where: { user_id: userId },
+                attributes: [
+                    'id', 'title', 'description', 'max_participants',
+                    'start_date', 'end_date', 'created_at', 'updated_at'
+                ],
+                include: [
+                    {
+                        model: Category,
+                        as: 'Category',
+                        attributes: ['name']
+                    },
+                    {
+                        model: City,
+                        as: 'City',
+                        attributes: ['name']
+                    },
+                    {
+                        model: District,
+                        as: 'District',
+                        attributes: ['name']
+                    },
+                    {
+                        model: Town,
+                        as: 'Town',
+                        attributes: ['name']
+                    },
+                    {
+                        model: StudyThumbnail,
+                        as: 'StudyThumbnails',
+                        attributes: ['path']
+                    },
+                    {
+                        model: User,
+                        as: 'User',
+                        attributes: ['nickname']
+                    }
+                ],
+                order: [['created_at', 'DESC']]
+            });
+
+            logger.info('(studyDao.findStudiesByUserId) 내가 만든 스터디 조회 완료', {
+                userId,
+                studyCount: studies.length,
+                timestamp: new Date().toISOString()
+            });
+
+            return studies;
+        } catch (error) {
+            logger.error('(studyDao.findStudiesByUserId) 내가 만든 스터디 조회 실패', {
+                error: error.toString(),
+                errorMessage: error.message,
+                errorStack: error.stack,
+                userId,
+                timestamp: new Date().toISOString()
+            });
+            throw new AppError('내가 만든 스터디 조회 중 오류가 발생했습니다.', 500);
         }
     }
 };
