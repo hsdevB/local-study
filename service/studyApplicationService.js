@@ -46,6 +46,7 @@ class StudyApplicationService {
 
   // 참가 신청 상태 업데이트
   async updateApplicationStatus(applicationId, status, userId) {
+    if (status === 'accepted') status = 'approved';
     const application = await studyApplicationDao.getApplicationById(applicationId);
     if (!application) {
       throw new Error('존재하지 않는 신청입니다.');
@@ -54,8 +55,8 @@ class StudyApplicationService {
     if (study.user_id !== userId) {
       throw new Error('스터디 생성자만 신청 상태를 변경할 수 있습니다.');
     }
-    // accepted로 변경 시 정원 체크
-    if (status === 'accepted') {
+    // approved로 변경 시 정원 체크
+    if (status === 'approved') {
       const acceptedCount = await studyApplicationDao.countAcceptedApplications(study.id);
       if (acceptedCount >= study.max_participants) {
         throw new Error('스터디 정원이 초과되어 더 이상 수락할 수 없습니다.');
@@ -202,10 +203,10 @@ class StudyApplicationService {
   async updateApplicationStatusHandler(req, res) {
     try {
       const { applicationId } = req.params;
-      const { status } = req.body;
+      let { status } = req.body;
       const userId = req.user.id;
-      
-      if (!['accepted', 'rejected'].includes(status)) {
+      if (status === 'accepted') status = 'approved';
+      if (!['approved', 'rejected'].includes(status)) {
         throw new Error('유효하지 않은 상태값입니다.');
       }
 
@@ -230,8 +231,8 @@ class StudyApplicationService {
         return res.status(403).json({ success: false, message: '스터디 생성자만 신청 상태를 변경할 수 있습니다.' });
       }
 
-      // accepted로 변경 시 정원 체크
-      if (status === 'accepted') {
+      // approved로 변경 시 정원 체크
+      if (status === 'approved') {
         const acceptedCount = await studyApplicationDao.countAcceptedApplications(study.id);
         if (acceptedCount >= study.max_participants) {
           return res.status(400).json({ success: false, message: '스터디 정원이 초과되어 더 이상 수락할 수 없습니다.' });
@@ -256,7 +257,7 @@ class StudyApplicationService {
 
       res.status(200).json({
         success: true,
-        message: `참가 신청이 ${status === 'accepted' ? '수락' : '거절'}되었습니다.`,
+        message: `참가 신청이 ${status === 'approved' ? '수락' : '거절'}되었습니다.`,
         data: result
       });
     } catch (error) {
@@ -301,8 +302,8 @@ class StudyApplicationService {
         return res.status(400).json({ success: false, message: '이미 취소된 신청입니다.' });
       }
 
-      // accepted 상태에서 취소하는 경우 참가자 수 감소
-      if (application.status === 'accepted') {
+      // approved 상태에서 취소하는 경우 참가자 수 감소
+      if (application.status === 'approved') {
         const study = await studyDao.findStudyById(application.study_id);
         if (!study) {
           return res.status(404).json({ success: false, message: '존재하지 않는 스터디입니다.' });

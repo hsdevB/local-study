@@ -32,7 +32,8 @@ class StudyApplicationDao {
           { model: StudyThumbnail, as: 'StudyThumbnails', attributes: ['id', 'path'] },
           { model: City, as: 'City', attributes: ['id', 'name'] },
           { model: District, as: 'District', attributes: ['id', 'name'] },
-          { model: Town, as: 'Town', attributes: ['id', 'name'] }
+          { model: Town, as: 'Town', attributes: ['id', 'name'] },
+          { model: User, as: 'User', attributes: ['userId', 'nickname'] }
         ]
       }]
     });
@@ -74,14 +75,17 @@ class StudyApplicationDao {
     return await StudyApplication.findByPk(applicationId);
   }
 
-  // 신청 취소
+  // 신청 취소 및 추방
   async deleteApplication(applicationId, userId) {
-    return await StudyApplication.destroy({
-      where: {
-        id: applicationId,
-        user_id: userId
-      }
-    });
+    let userPk = userId;
+    if (userId && isNaN(Number(userId))) {
+      const user = await User.findOne({ where: { userId } });
+      if (!user) throw new Error('해당 유저를 찾을 수 없습니다.');
+      userPk = user.id;
+    }
+    const where = { id: applicationId };
+    if (userId) where.user_id = userPk;
+    return await StudyApplication.destroy({ where });
   }
 
   // accepted 상태 신청자 수 카운트
@@ -89,7 +93,7 @@ class StudyApplicationDao {
     return await StudyApplication.count({
       where: {
         study_id: studyId,
-        status: 'accepted'
+        status: 'approved'
       }
     });
   }
@@ -97,10 +101,17 @@ class StudyApplicationDao {
   // 스터디와 사용자 ID로 신청 내역 조회
   async findApplicationByStudyAndUser(studyId, userId) {
     try {
+      let userPk = userId;
+      if (isNaN(Number(userId))) {
+        // userId가 숫자가 아니면, User 테이블에서 id(PK)를 조회
+        const user = await User.findOne({ where: { userId } });
+        if (!user) throw new Error('해당 유저를 찾을 수 없습니다.');
+        userPk = user.id;
+      }
       const application = await StudyApplication.findOne({
         where: {
           study_id: studyId,
-          user_id: userId
+          user_id: userPk
         }
       });
       return application;
@@ -113,6 +124,14 @@ class StudyApplicationDao {
       });
       throw error;
     }
+  }
+
+  // 신청 상태를 'kicked'로 변경
+  async kickApplication(applicationId) {
+    return await StudyApplication.update(
+      { status: 'kicked' },
+      { where: { id: applicationId } }
+    );
   }
 }
 

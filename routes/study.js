@@ -23,4 +23,7 @@ studyRouter.delete('/:id', verifyToken, studyService.deleteStudyHandler.bind(stu
 // 종료된 스터디 조회 (인증 필요)
 studyRouter.get('/ended/list', verifyToken, studyService.getEndedStudiesHandler.bind(studyService));
 
+// 참여자 추방
+studyRouter.delete('/:id/participant/:userId', verifyToken, studyService.kickParticipantHandler.bind(studyService));
+
 export default studyRouter; 

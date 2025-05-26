@@ -27,7 +27,7 @@ app.use(helmet());
 // CORS 설정
 app.use(cors({
     origin: 'http://localhost:5173', // 프론트엔드 주소
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH','OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     exposedHeaders: ['Set-Cookie'],
     credentials: true // 쿠키 전송을 위해 필요
@@ -81,6 +81,9 @@ app.use((req, res, next) => {
 
     next();
 });
+
+// 정적 파일 서빙: public/images
+app.use('/images', express.static(path.join(__dirname, 'public/images')));
 
 // 라우터 설정
 app.use('/', indexRouter);

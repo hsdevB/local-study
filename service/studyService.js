@@ -6,6 +6,10 @@ import fs from 'fs';
 import path from 'path';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
+import studyApplicationDao from '../dao/studyApplicationDao.js';
+import db from '../models/index.js';
+
+const { StudyApplication, User } = db;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -336,12 +340,20 @@ const studyService = {
                 studyObj.current_participants = 1;
             }
 
-            // 승인된 참여자 조회
-            const approvedApps = await studyDao.findApprovedParticipants(studyObj.id);
-            let participants = approvedApps.map(app => ({
+            // 모든 신청(approved, kicked 등) 조회
+            const allApps = await StudyApplication.findAll({
+                where: { study_id: studyObj.id },
+                include: [{
+                    model: User,
+                    as: 'User',
+                    attributes: ['id', 'userId', 'nickname']
+                }]
+            });
+            let participants = allApps.map(app => ({
                 id: app.User.id,
                 userId: app.User.userId,
                 nickname: app.User.nickname,
+                status: app.status,
                 isAuthor: false
             }));
 
@@ -359,17 +371,12 @@ const studyService = {
                 );
             }
             studyObj.participants = participants;
-
             let responseData = { study: studyObj };
 
             if (req.user) {
                 const application = await studyDao.findStudyApplication(id, req.user.id);
                 responseData.application = application;
-                
-                // 현재 사용자가 작성자인지 확인
                 responseData.isAuthor = studyObj.User.id === req.user.id;
-                
-                // 현재 사용자가 참여자인지 확인
                 responseData.isParticipant = participants.some(p => p.id === req.user.id);
             }
 
@@ -503,6 +510,43 @@ const studyService = {
                 timestamp: new Date().toISOString()
             });
             res.status(500).json({ success: false, message: '종료된 스터디 조회 중 오류가 발생했습니다.' });
+        }
+    },
+
+    async kickParticipantHandler(req, res) {
+        try {
+            const { id, userId } = req.params;
+            const requesterId = req.user.id;
+
+            // 1. 스터디 존재 및 권한 확인
+            const study = await studyDao.findStudyById(id);
+            if (!study) {
+                return res.status(404).json({ success: false, message: '존재하지 않는 스터디입니다.' });
+            }
+            if (study.user_id !== requesterId) {
+                return res.status(403).json({ success: false, message: '스터디 생성자만 추방할 수 있습니다.' });
+            }
+            if (study.user_id == userId) {
+                return res.status(400).json({ success: false, message: '작성자는 추방할 수 없습니다.' });
+            }
+
+            // 2. 해당 유저의 참가 신청 상태를 'kicked'로 변경
+            const application = await studyApplicationDao.findApplicationByStudyAndUser(id, userId);
+            if (!application || application.status !== 'approved') {
+                return res.status(404).json({ success: false, message: '해당 유저는 승인된 참여자가 아닙니다.' });
+            }
+            await studyApplicationDao.kickApplication(application.id);
+
+            // 3. 현재 참가자 수 감소
+            if (study.current_participants > 0) {
+                await studyDao.updateStudy(study, {
+                    current_participants: study.current_participants - 1
+                });
+            }
+
+            res.status(200).json({ success: true, message: '참여자가 추방되었습니다.' });
+        } catch (err) {
+            res.status(500).json({ success: false, message: '참여자 추방 중 오류가 발생했습니다.' });
         }
     }
 };

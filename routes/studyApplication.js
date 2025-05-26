@@ -23,4 +23,6 @@ studyApplicationRouter.delete('/:applicationId', verifyToken, studyApplicationSe
 // 내가 만든(운영하는) 스터디 목록 조회
 studyApplicationRouter.get('/my-created', verifyToken, studyApplicationService.getMyCreatedStudiesHandler.bind(studyApplicationService));
 
+
+
 export default studyApplicationRouter; 
