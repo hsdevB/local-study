@@ -12,4 +12,6 @@ signupRouter.get('/check-email', signupService.checkEmail.bind(signupService));
 signupRouter.post('/send-email-code', signupService.sendEmailCode.bind(signupService));
 signupRouter.post('/verify-email-code', signupService.verifyEmailCode.bind(signupService));
 
+signupRouter.get('/check-nickname', signupService.checkNickname.bind(signupService));
+
 export default signupRouter;

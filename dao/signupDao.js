@@ -90,6 +90,25 @@ const signupDao = {
             });
             throw new AppError('이메일 조회 중 오류가 발생했습니다.', 500);
         }
+    },
+    findByNickname: async(nickname) => {
+        try {
+            const user = await User.findOne({ 
+                where: { 
+                    nickname,
+                    deletedAt: null  // 탈퇴하지 않은 사용자만 체크
+                },
+                attributes: ['id', 'userId', 'nickname']
+            });
+            return user;
+        } catch (err) {
+            logger.error('(signupDao.findByNickname) 닉네임 조회 실패', {
+                error: err.toString(),
+                nickname,
+                timestamp: new Date().toISOString()
+            });
+            throw new AppError('닉네임 조회 중 오류가 발생했습니다.', 500);
+        }
     }
 };
 

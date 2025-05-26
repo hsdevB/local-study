@@ -34,7 +34,7 @@ const userDao = {
         try {
             const user = await User.findOne({ 
                 where: { userId },
-                attributes: ['id', 'userId', 'nickname', 'email', 'phoneNumber', 'birthDate', 'gender']
+                attributes: ['id', 'userId', 'password', 'nickname', 'email', 'phoneNumber', 'birthDate', 'gender']
             });
             return user;
         } catch (err) {
@@ -104,7 +104,7 @@ const userDao = {
 
             const updatedUser = await User.findOne({
                 where: { userId },
-                attributes: ['userId', 'email', 'username', 'phoneNumber', 'birthDate', 'gender']
+                attributes: ['userId', 'email', 'nickname', 'phoneNumber', 'birthDate', 'gender']
             });
 
             logger.info('(userDao.updateUser) 회원정보 수정 완료', {

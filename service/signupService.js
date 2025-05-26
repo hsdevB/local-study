@@ -182,6 +182,18 @@ const signupService = {
             res.status(500).json({ success: false, message: '이메일 인증 코드 검증 중 오류가 발생했습니다.' });
         }
     },
+    async checkNickname(req, res) {
+        try {
+            const { nickname } = req.query;
+            if (!nickname) {
+                return res.status(400).json({ success: false, message: 'nickname은 필수입니다.' });
+            }
+            const user = await signupDao.findByNickname(nickname);
+            res.status(200).json({ success: true, available: !user });
+        } catch (err) {
+            res.status(500).json({ success: false, message: '닉네임 중복 검사 중 오류가 발생했습니다.' });
+        }
+    },
 };
 
 export default signupService;

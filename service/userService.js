@@ -5,6 +5,7 @@ import tokenBlacklistDao from '../dao/tokenBlacklistDao.js';
 import logger from '../utils/logger.js';
 import { AppError } from '../utils/errorHandler.js';
 import validationUtil from '../utils/validationUtil.js';
+import signupDao from '../dao/signupDao.js';
 
 const userService = {
     async login(params) {
@@ -146,6 +147,14 @@ const userService = {
                 }
             }
 
+            // 4. 닉네임 중복 검사
+            if(updateData.nickname){
+                const existingNickname = await signupDao.findByNickname(updateData.nickname);
+                if(existingNickname){
+                    throw new AppError('이미 사용 중인 닉네임입니다.', 400);
+                }
+            }
+
             // 4. 사용자 정보 업데이트
             const updatedUser = await userDao.updateUser(userId, updateData);
 
@@ -161,7 +170,8 @@ const userService = {
                     userId: updatedUser.userId,
                     email: updatedUser.email,
                     username: updatedUser.username,
-                    phoneNumber: updatedUser.phoneNumber
+                    phoneNumber: updatedUser.phoneNumber,
+                    nickname: updatedUser.nickname
                 }
             };
         } catch (err) {
@@ -287,9 +297,10 @@ const userService = {
     },
     async changePasswordHandler(req, res) {
         try {
-            const { userId, currentPassword, newPassword } = req.body;
-            if (!userId || !currentPassword || !newPassword) {
-                return res.status(400).json({ success: false, message: '사용자 ID, 현재 비밀번호, 새 비밀번호는 필수 입력값입니다.' });
+            const userId = req.user.userId;
+            const { currentPassword, newPassword } = req.body;
+            if (!currentPassword || !newPassword) {
+                return res.status(400).json({ success: false, message: '현재 비밀번호와 새 비밀번호는 필수 입력값입니다.' });
             }
             const result = await this.changePassword(userId, currentPassword, newPassword);
             res.status(200).json({ success: true, message: result.message });
@@ -299,12 +310,9 @@ const userService = {
     },
     async updateUserInfoHandler(req, res) {
         try {
-            const { userId } = req.body;
+            const userId = req.user.userId;
             const updateData = { ...req.body };
             delete updateData.userId;
-            if (!userId) {
-                return res.status(400).json({ success: false, message: '사용자 ID는 필수 입력값입니다.' });
-            }
             if (Object.keys(updateData).length === 0) {
                 return res.status(400).json({ success: false, message: '수정할 정보가 없습니다.' });
             }
