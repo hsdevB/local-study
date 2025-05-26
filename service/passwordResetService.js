@@ -54,10 +54,6 @@ const passwordResetService = {
   async requestPasswordResetHandler(req, res, next) {
     try {
       const { userId, email } = req.body;
-      const tokenUserId = req.user.userId;
-      if (userId !== tokenUserId) {
-        return res.status(403).json({ success: false, message: '권한이 없습니다.' });
-      }
       if (!userId || !email) {
         return res.status(400).json({ success: false, message: '아이디와 이메일을 모두 입력해주세요.' });
       }
