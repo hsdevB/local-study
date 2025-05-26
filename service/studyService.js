@@ -344,6 +344,7 @@ const studyService = {
                 nickname: app.User.nickname,
                 isAuthor: false
             }));
+
             // 작성자 정보 추가 (중복 방지)
             if (!participants.some(p => p.id === studyObj.User.id)) {
                 participants.unshift({
@@ -364,6 +365,12 @@ const studyService = {
             if (req.user) {
                 const application = await studyDao.findStudyApplication(id, req.user.id);
                 responseData.application = application;
+                
+                // 현재 사용자가 작성자인지 확인
+                responseData.isAuthor = studyObj.User.id === req.user.id;
+                
+                // 현재 사용자가 참여자인지 확인
+                responseData.isParticipant = participants.some(p => p.id === req.user.id);
             }
 
             logger.info('(studyService.getStudyByIdHandler) 스터디 상세 조회 완료', {

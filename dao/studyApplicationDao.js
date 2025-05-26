@@ -1,6 +1,11 @@
 import StudyApplication from '../models/studyApplication.js';
 import Study from '../models/study.js';
 import User from '../models/user.js';
+import Category from '../models/category.js';
+import StudyThumbnail from '../models/studyThumbnail.js';
+import City from '../models/city.js';
+import District from '../models/district.js';
+import Town from '../models/town.js';
 import logger from '../utils/logger.js';
 
 class StudyApplicationDao {
@@ -21,7 +26,14 @@ class StudyApplicationDao {
       include: [{
         model: Study,
         as: 'Study',
-        attributes: ['id', 'title', 'description', 'start_date', 'end_date', 'max_participants']
+        attributes: ['id', 'title', 'description', 'start_date', 'end_date', 'max_participants', 'current_participants'],
+        include: [
+          { model: Category, as: 'Category', attributes: ['id', 'name'] },
+          { model: StudyThumbnail, as: 'StudyThumbnails', attributes: ['id', 'path'] },
+          { model: City, as: 'City', attributes: ['id', 'name'] },
+          { model: District, as: 'District', attributes: ['id', 'name'] },
+          { model: Town, as: 'Town', attributes: ['id', 'name'] }
+        ]
       }]
     });
   }

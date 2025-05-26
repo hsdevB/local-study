@@ -340,6 +340,29 @@ class StudyApplicationService {
       res.status(400).json({ success: false, message: error.message });
     }
   }
+
+  // 내가 만든(운영하는) 스터디 목록 조회
+  async getMyCreatedStudiesHandler(req, res) {
+    try {
+      const userId = req.user.id;
+      // Study 테이블에서 user_id가 본인인 스터디 목록 조회
+      const studies = await studyDao.findStudies({ user_id: userId });
+      res.status(200).json({
+        success: true,
+        data: studies
+      });
+    } catch (error) {
+      logger.error('(studyApplicationService.getMyCreatedStudiesHandler) 내가 만든 스터디 목록 조회 실패', {
+        error: error.toString(),
+        userId: req.user?.id,
+        timestamp: new Date().toISOString()
+      });
+      res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+  }
 }
 
 export default new StudyApplicationService(); 
