@@ -27,10 +27,11 @@ app.use(helmet());
 // CORS 설정
 app.use(cors({
     origin: 'http://localhost:5173', // 프론트엔드 주소
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH','OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    exposedHeaders: ['Set-Cookie'],
-    credentials: true // 쿠키 전송을 위해 필요
+    exposedHeaders: ['Set-Cookie', 'Content-Type', 'Content-Length'],
+    credentials: true, // 쿠키 전송을 위해 필요
+    maxAge: 86400 // 24시간
 }));
 
 // 쿠키 파서 미들웨어 추가
@@ -83,7 +84,20 @@ app.use((req, res, next) => {
 });
 
 // 정적 파일 서빙: public/images
-app.use('/images', express.static(path.join(__dirname, 'public/images')));
+app.use('/images', (req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+    next();
+}, express.static(path.join(__dirname, 'public/images'), {
+    setHeaders: (res, path) => {
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+        res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+    }
+}));
 
 // 라우터 설정
 app.use('/', indexRouter);
