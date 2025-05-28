@@ -15,70 +15,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const studyService = {
-    createStudy: async (req, res) => {
-        try {
-            if (!req.user) {
-                throw new AppError('로그인이 필요한 서비스입니다.', 401);
-            }
-
-            const studyData = {
-                ...req.body,
-                user_id: req.user.id,
-                city_id: req.body.city_id,
-                district_id: req.body.district_id,
-                town_id: req.body.town_id
-            };
-
-            // 썸네일이 없을 경우 기본 이미지 사용
-            // const thumbnailFile = req.file || {
-            //     filename: 'basicImage.jpg',
-            //     path: 'public/images/basicImage.jpg',
-            //     mimetype: 'image/jpeg',
-            //     size: 0
-            // };
-
-            let thumbnailFile = req.file;
-            if (!thumbnailFile) {
-                thumbnailFile = {
-                    filename: 'logo.png',
-                    path: '/images/logo.png',
-                    mimetype: 'image/png',
-                    size: 0
-                };
-            }
-
-            const study = await studyDao.createStudy(studyData, thumbnailFile);
-
-            logger.info('(studyService.createStudy) 스터디 생성 완료', {
-                studyId: study.id,
-                userId: req.user.id,
-                hasThumbnail: !!req.file,
-                isDefaultImage: !req.file,
-                timestamp: new Date().toISOString()
-            });
-
-            res.status(201).json({
-                success: true,
-                message: '스터디가 생성되었습니다.',
-                data: study
-            });
-        } catch (err) {
-            logger.error('(studyService.createStudy) 스터디 생성 실패', {
-                error: err.toString(),
-                userId: req.user?.id,
-                timestamp: new Date().toISOString()
-            });
-            throw err;
-        }
-    },
-
     getStudies: async (req, res) => {
         try {
             const { category_id, city_id, search, status } = req.query || {};
             const where = {};
-
-            if (category_id) where.category_id = category_id;
-            if (city_id) where.city_id = city_id;
+            
+            if (category_id && category_id !== 'all') {
+                where.category_id = Number(category_id);
+            }
+            if (city_id) where.city_id = Number(city_id);
             if (status) where.status = status;
             if (search) {
                 where[Op.or] = [
@@ -89,6 +34,18 @@ const studyService = {
 
             const studies = await studyDao.findStudies(where);
 
+            // 응답 데이터 가공
+            const formattedStudies = studies.map(study => {
+                const { category_id, city_id, ...rest } = study.toJSON();
+                return {
+                    ...rest,
+                    Category: study.Category,
+                    City: study.City,
+                    District: study.District,
+                    Town: study.Town,
+                };
+            });
+
             logger.info('(studyService.getStudies) 스터디 목록 조회 완료', {
                 resultCount: studies.length,
                 timestamp: new Date().toISOString()
@@ -97,15 +54,19 @@ const studyService = {
             res.status(200).json({
                 success: true,
                 message: studies.length === 0 ? '등록된 스터디가 없습니다.' : '스터디 목록 조회 성공',
-                data: studies || []
+                data: formattedStudies
             });
         } catch (err) {
             logger.error('(studyService.getStudies) 스터디 목록 조회 실패', {
                 error: err.toString(),
                 errorMessage: err.message,
+                stack: err.stack,
                 timestamp: new Date().toISOString()
             });
-            throw err;
+            res.status(500).json({ 
+                success: false, 
+                message: '스터디 목록 조회 중 오류가 발생했습니다.' 
+            });
         }
     },
 
@@ -119,14 +80,65 @@ const studyService = {
                     studyId: id,
                     timestamp: new Date().toISOString()
                 });
-                throw new AppError('존재하지 않는 스터디입니다.', 404);
+                return res.status(404).json({ 
+                    success: false, 
+                    message: '존재하지 않는 스터디입니다.' 
+                });
             }
 
-            let responseData = { study };
+            // study 객체를 JSON으로 변환
+            let studyObj = study.toJSON();
+
+            // 불필요한 필드 제거
+            delete studyObj.district_id;
+            delete studyObj.town_id;
+            delete studyObj.user_id;
+            delete studyObj.category_id;
+            delete studyObj.city_id;
+
+            // current_participants 기본값 보정
+            if (!studyObj.current_participants || studyObj.current_participants < 1) {
+                studyObj.current_participants = 1;
+            }
+
+            // 모든 신청(approved, kicked 등) 조회
+            const allApps = await StudyApplication.findAll({
+                where: { study_id: studyObj.id },
+                include: [{
+                    model: User,
+                    as: 'User',
+                    attributes: ['id', 'userId', 'nickname']
+                }]
+            });
+            let participants = allApps.map(app => ({
+                id: app.User.id,
+                userId: app.User.userId,
+                nickname: app.User.nickname,
+                status: app.status,
+                isAuthor: false
+            }));
+
+            // 작성자 정보 추가 (중복 방지)
+            if (!participants.some(p => p.id === studyObj.User.id)) {
+                participants.unshift({
+                    id: studyObj.User.id,
+                    userId: studyObj.User.userId,
+                    nickname: studyObj.User.nickname,
+                    isAuthor: true
+                });
+            } else {
+                participants = participants.map(p =>
+                    p.id === studyObj.User.id ? { ...p, isAuthor: true } : p
+                );
+            }
+            studyObj.participants = participants;
+            let responseData = { study: studyObj };
 
             if (req.user) {
                 const application = await studyDao.findStudyApplication(id, req.user.id);
                 responseData.application = application;
+                responseData.isAuthor = studyObj.User.id === req.user.id;
+                responseData.isParticipant = participants.some(p => p.id === req.user.id);
             }
 
             logger.info('(studyService.getStudyById) 스터디 상세 조회 완료', {
@@ -145,7 +157,10 @@ const studyService = {
                 studyId: req.params.id,
                 timestamp: new Date().toISOString()
             });
-            throw err;
+            res.status(500).json({ 
+                success: false, 
+                message: '스터디 상세 조회 중 오류가 발생했습니다.' 
+            });
         }
     },
 
@@ -216,29 +231,30 @@ const studyService = {
             logger.error('(studyService.updateStudy) 스터디 수정 실패', {
                 error: err.toString(),
                 studyId: req.params.id,
-                userId: req.user?.id,
                 timestamp: new Date().toISOString()
             });
-            throw err;
+            return res.status(500).json({
+                success: false,
+                message: '스터디 수정 중 오류가 발생했습니다.'
+            });
         }
     },
 
     deleteStudy: async (req, res) => {
         try {
             if (!req.user) {
-                throw new AppError('로그인이 필요한 서비스입니다.', 401);
+                return res.status(401).json({ success: false, message: '로그인이 필요한 서비스입니다.' });
             }
-
             const { id } = req.params;
             const study = await studyDao.findStudyByIdAndUserId(id, req.user.id);
-
+            
             if (!study) {
                 logger.warn('(studyService.deleteStudy) 존재하지 않는 스터디 삭제 시도 또는 권한 없음', {
                     studyId: id,
                     userId: req.user.id,
                     timestamp: new Date().toISOString()
                 });
-                throw new AppError('존재하지 않는 스터디이거나 삭제 권한이 없습니다.', 404);
+                return res.status(404).json({ success: false, message: '존재하지 않는 스터디이거나 삭제 권한이 없습니다.' });
             }
 
             await studyDao.deleteStudy(study);
@@ -260,349 +276,68 @@ const studyService = {
                 userId: req.user?.id,
                 timestamp: new Date().toISOString()
             });
-            throw err;
+            res.status(500).json({ success: false, message: '스터디 삭제 중 오류가 발생했습니다.' });
         }
     },
 
-    getEndedStudies: async (req, res) => {
-        try {
-            const userId = req.user.userId;
-            const studies = await studyDao.getEndedStudies(userId);
-            
-            logger.info('(studyService.getEndedStudies)', {
-                userId,
-                count: studies.length
-            });
-
-            res.status(200).json({
-                success: true,
-                message: '종료된 스터디 조회 성공',
-                data: studies
-            });
-        } catch (err) {
-            logger.error('(studyService.getEndedStudies)', {
-                error: err.toString(),
-                userId: req.user?.userId
-            });
-            throw new AppError('종료된 스터디 조회 중 오류가 발생했습니다.', 500);
-        }
-    },
-
-    getStudiesHandler: async (req, res) => {
-        try {
-            const { category_id, city_id, search, status } = req.query || {};
-            const where = {};
-            
-            if (category_id && category_id !== 'all') {
-                where.category_id = Number(category_id);
-            }
-            if (city_id) where.city_id = Number(city_id);
-            if (status) where.status = status;
-            if (search) {
-                where[Op.or] = [
-                    { title: { [Op.like]: `%${search}%` } },
-                    { description: { [Op.like]: `%${search}%` } }
-                ];
-            }
-
-            const studies = await studyDao.findStudies(where);
-
-            // 응답 데이터 가공
-            const formattedStudies = studies.map(study => {
-                const { category_id, city_id, ...rest } = study.toJSON();
-                return {
-                    ...rest,
-                    Category: study.Category,
-                    City: study.City,
-                    District: study.District,
-                    Town: study.Town,
-                };
-            });
-
-            logger.info('(studyService.getStudiesHandler) 스터디 목록 조회 완료', {
-                resultCount: studies.length,
-                timestamp: new Date().toISOString()
-            });
-
-            res.status(200).json({
-                success: true,
-                message: studies.length === 0 ? '등록된 스터디가 없습니다.' : '스터디 목록 조회 성공',
-                data: formattedStudies
-            });
-        } catch (err) {
-            logger.error('(studyService.getStudiesHandler) 스터디 목록 조회 실패', {
-                error: err.toString(),
-                errorMessage: err.message,
-                stack: err.stack,
-                timestamp: new Date().toISOString()
-            });
-            res.status(500).json({ 
-                success: false, 
-                message: '스터디 목록 조회 중 오류가 발생했습니다.' 
-            });
-        }
-    },
-
-    getStudyByIdHandler: async (req, res) => {
-        try {
-            const { id } = req.params;
-            const study = await studyDao.findStudyById(id);
-
-            if (!study) {
-                logger.warn('(studyService.getStudyByIdHandler) 존재하지 않는 스터디 조회 시도', {
-                    studyId: id,
-                    timestamp: new Date().toISOString()
-                });
-                return res.status(404).json({ 
-                    success: false, 
-                    message: '존재하지 않는 스터디입니다.' 
-                });
-            }
-
-            // study 객체를 JSON으로 변환
-            let studyObj = study.toJSON();
-
-            // _id 필드 제거
-            delete studyObj.district_id;
-            delete studyObj.town_id;
-            delete studyObj.user_id;
-            delete studyObj.category_id;
-            delete studyObj.city_id;
-
-            // current_participants 기본값 보정
-            if (!studyObj.current_participants || studyObj.current_participants < 1) {
-                studyObj.current_participants = 1;
-            }
-
-            // 모든 신청(approved, kicked 등) 조회
-            const allApps = await StudyApplication.findAll({
-                where: { study_id: studyObj.id },
-                include: [{
-                    model: User,
-                    as: 'User',
-                    attributes: ['id', 'userId', 'nickname']
-                }]
-            });
-            let participants = allApps.map(app => ({
-                id: app.User.id,
-                userId: app.User.userId,
-                nickname: app.User.nickname,
-                status: app.status,
-                isAuthor: false
-            }));
-
-            // 작성자 정보 추가 (중복 방지)
-            if (!participants.some(p => p.id === studyObj.User.id)) {
-                participants.unshift({
-                    id: studyObj.User.id,
-                    userId: studyObj.User.userId,
-                    nickname: studyObj.User.nickname,
-                    isAuthor: true
-                });
-            } else {
-                participants = participants.map(p =>
-                    p.id === studyObj.User.id ? { ...p, isAuthor: true } : p
-                );
-            }
-            studyObj.participants = participants;
-            let responseData = { study: studyObj };
-
-            if (req.user) {
-                const application = await studyDao.findStudyApplication(id, req.user.id);
-                responseData.application = application;
-                responseData.isAuthor = studyObj.User.id === req.user.id;
-                responseData.isParticipant = participants.some(p => p.id === req.user.id);
-            }
-
-            logger.info('(studyService.getStudyByIdHandler) 스터디 상세 조회 완료', {
-                studyId: id,
-                userId: req.user?.id,
-                timestamp: new Date().toISOString()
-            });
-
-            res.status(200).json({
-                success: true,
-                data: responseData
-            });
-        } catch (err) {
-            logger.error('(studyService.getStudyByIdHandler) 스터디 상세 조회 실패', {
-                error: err.toString(),
-                studyId: req.params.id,
-                timestamp: new Date().toISOString()
-            });
-            res.status(500).json({ 
-                success: false, 
-                message: '스터디 상세 조회 중 오류가 발생했습니다.' 
-            });
-        }
-    },
-
-    updateStudyHandler: async (req, res) => {
+    createStudy: async (req, res) => {
         try {
             if (!req.user) {
                 throw new AppError('로그인이 필요한 서비스입니다.', 401);
             }
 
-            const { id } = req.params;
-            const study = await studyDao.findStudyByIdAndUserId(id, req.user.id);
-
-            if (!study) {
-                logger.warn('(studyService.updateStudyHandler) 존재하지 않는 스터디 수정 시도 또는 권한 없음', {
-                    studyId: id,
-                    userId: req.user.id,
-                    timestamp: new Date().toISOString()
-                });
-                throw new AppError('존재하지 않는 스터디이거나 수정 권한이 없습니다.', 404);
+            // 필수 지역 정보 검증
+            if (!req.body.city_id) {
+                throw new AppError('시/도 정보는 필수입니다.', 400);
             }
 
-            // 기본 스터디 정보 업데이트
-            const updatedStudy = await studyDao.updateStudy(study, req.body);
+            const studyData = {
+                ...req.body,
+                user_id: req.user.id,
+                city_id: req.body.city_id,
+                district_id: req.body.district_id || null,
+                town_id: req.body.town_id || null
+            };
 
-            // 썸네일 처리
-            if (req.file) {
-                // 새로운 썸네일이 업로드된 경우
-                const thumbnailData = {
-                    path: req.file.path,
-                    filename: req.file.filename,
-                    size: req.file.size,
-                    mimetype: req.file.mimetype
-                };
-                await studyDao.updateStudyThumbnail(id, thumbnailData);
-            } else if (req.body.delete_thumbnail === 'true') {
-                // 썸네일 삭제 요청이 있는 경우
-                const defaultThumbnail = {
-                    path: '/images/logo.png',
+            let thumbnailFile = req.file;
+            if (!thumbnailFile) {
+                thumbnailFile = {
                     filename: 'logo.png',
-                    size: 0,
-                    mimetype: 'image/png'
+                    path: '/images/logo.png',
+                    mimetype: 'image/png',
+                    size: 0
                 };
-                await studyDao.updateStudyThumbnail(id, defaultThumbnail);
-            } else if (req.body.keep_thumbnail === 'true') {
-                // 기존 썸네일 유지
-                logger.info('(studyService.updateStudyHandler) 기존 썸네일 유지', {
-                    studyId: id,
-                    timestamp: new Date().toISOString()
-                });
             }
-            // 썸네일 관련 요청이 없는 경우 기존 썸네일 유지
 
-            logger.info('(studyService.updateStudyHandler) 스터디 수정 완료', {
-                studyId: id,
+            const study = await studyDao.createStudy(studyData, thumbnailFile);
+
+            logger.info('(studyService.createStudy) 스터디 생성 완료', {
+                studyId: study.id,
                 userId: req.user.id,
-                hasNewThumbnail: !!req.file,
-                deleteThumbnail: req.body.delete_thumbnail === 'true',
-                keepThumbnail: req.body.keep_thumbnail === 'true',
+                cityId: studyData.city_id,
+                districtId: studyData.district_id,
+                townId: studyData.town_id,
+                hasThumbnail: !!req.file,
+                isDefaultImage: !req.file,
                 timestamp: new Date().toISOString()
             });
 
-            res.status(200).json({
+            res.status(201).json({
                 success: true,
-                message: '스터디가 수정되었습니다.',
-                data: updatedStudy
+                message: '스터디가 생성되었습니다.',
+                data: study
             });
         } catch (err) {
-            logger.error('(studyService.updateStudyHandler) 스터디 수정 실패', {
+            logger.error('(studyService.createStudy) 스터디 생성 실패', {
                 error: err.toString(),
-                studyId: req.params.id,
-                timestamp: new Date().toISOString()
-            });
-            return res.status(500).json({
-                success: false,
-                message: '스터디 수정 중 오류가 발생했습니다.'
-            });
-        }
-    },
-
-    deleteStudyHandler: async (req, res) => {
-        try {
-            if (!req.user) {
-                return res.status(401).json({ success: false, message: '로그인이 필요한 서비스입니다.' });
-            }
-            const { id } = req.params;
-            const study = await studyDao.findStudyByIdAndUserId(id, req.user.id);
-            
-            if (!study) {
-                logger.warn('(studyService.deleteStudyHandler) 존재하지 않는 스터디 삭제 시도 또는 권한 없음', {
-                    studyId: id,
-                    userId: req.user.id,
-                    timestamp: new Date().toISOString()
-                });
-                return res.status(404).json({ success: false, message: '존재하지 않는 스터디이거나 삭제 권한이 없습니다.' });
-            }
-
-            await studyDao.deleteStudy(study);
-
-            logger.info('(studyService.deleteStudyHandler) 스터디 삭제 완료', {
-                studyId: id,
-                userId: req.user.id,
-                timestamp: new Date().toISOString()
-            });
-
-            res.status(200).json({
-                success: true,
-                message: '스터디가 삭제되었습니다.'
-            });
-        } catch (err) {
-            logger.error('(studyService.deleteStudyHandler) 스터디 삭제 실패', {
-                error: err.toString(),
-                studyId: req.params.id,
                 userId: req.user?.id,
                 timestamp: new Date().toISOString()
             });
-            res.status(500).json({ success: false, message: '스터디 삭제 중 오류가 발생했습니다.' });
+            res.status(500).json({ success: false, message: '스터디 생성 중 오류가 발생했습니다.' });
         }
     },
 
-    getEndedStudiesHandler: async (req, res) => {
-        try {
-            await this.getEndedStudies(req, res);
-        } catch (err) {
-            next(err);
-        }
-    },
-
-    getMyStudiesHandler: async (req, res) => {
-        try {
-            if (!req.user || !req.user.id) {
-                logger.error('(studyService.getMyStudiesHandler) 인증되지 않은 사용자', {
-                    timestamp: new Date().toISOString()
-                });
-                return res.status(401).json({ message: '인증이 필요합니다.' });
-            }
-
-            logger.info('(studyService.getMyStudiesHandler) 내가 만든 스터디 조회 시작', {
-                userId: req.user.id,
-                timestamp: new Date().toISOString()
-            });
-
-            const studies = await studyDao.findStudiesByUserId(req.user.id);
-            
-            logger.info('(studyService.getMyStudiesHandler) 내가 만든 스터디 조회 완료', {
-                userId: req.user.id,
-                studyCount: studies.length,
-                timestamp: new Date().toISOString()
-            });
-
-            return res.status(200).json({
-                message: '내가 만든 스터디 목록을 성공적으로 가져왔습니다.',
-                studies: studies
-            });
-        } catch (error) {
-            logger.error('(studyService.getMyStudiesHandler) 내가 만든 스터디 조회 실패', {
-                error: error.toString(),
-                errorMessage: error.message,
-                errorStack: error.stack,
-                userId: req.user?.id,
-                timestamp: new Date().toISOString()
-            });
-            return res.status(500).json({ 
-                message: '내가 만든 스터디 목록을 가져오는데 실패했습니다.',
-                error: error.message 
-            });
-        }
-    },
-
-    async kickParticipantHandler(req, res) {
+    kickParticipant: async (req, res) => {
         try {
             const { id, userId } = req.params;
             const requesterId = req.user.id;
@@ -637,64 +372,54 @@ const studyService = {
         } catch (err) {
             res.status(500).json({ success: false, message: '참여자 추방 중 오류가 발생했습니다.' });
         }
+    },
+
+    // 내가 만든 스터디 목록 조회
+    getMyStudies: async (req, res) => {
+        try {
+            const userId = req.user.id;
+            if (!userId) {
+                logger.warn('(studyService.getMyStudies) 로그인하지 않은 사용자의 요청', {
+                    timestamp: new Date().toISOString()
+                });
+                return res.status(401).json({ 
+                    success: false,
+                    message: '로그인이 필요합니다.' 
+                });
+            }
+
+            logger.info('(studyService.getMyStudies) 내가 만든 스터디 조회 시작', {
+                userId,
+                timestamp: new Date().toISOString()
+            });
+
+            const studies = await studyDao.findStudiesByUserId(userId);
+            
+            logger.info('(studyService.getMyStudies) 내가 만든 스터디 조회 완료', {
+                userId,
+                studyCount: studies.length,
+                timestamp: new Date().toISOString()
+            });
+
+            res.status(200).json({
+                success: true,
+                message: studies.length === 0 ? '생성한 스터디가 없습니다.' : '내가 만든 스터디 목록 조회 성공',
+                data: studies
+            });
+        } catch (error) {
+            logger.error('(studyService.getMyStudies) 내가 만든 스터디 목록 조회 실패', {
+                error: error.toString(),
+                errorMessage: error.message,
+                errorStack: error.stack,
+                userId: req.user?.id,
+                timestamp: new Date().toISOString()
+            });
+            res.status(500).json({ 
+                success: false,
+                message: '내가 만든 스터디 목록 조회 중 오류가 발생했습니다.' 
+            });
+        }
     }
 };
-
-export async function createStudyHandler(req, res) {
-    try {
-        if (!req.user) {
-            throw new AppError('로그인이 필요한 서비스입니다.', 401);
-        }
-
-        // 필수 지역 정보 검증
-        if (!req.body.city_id) {
-            throw new AppError('시/도 정보는 필수입니다.', 400);
-        }
-
-        const studyData = {
-            ...req.body,
-            user_id: req.user.id,
-            city_id: req.body.city_id,
-            district_id: req.body.district_id || null,
-            town_id: req.body.town_id || null
-        };
-
-        let thumbnailFile = req.file;
-        if (!thumbnailFile) {
-            thumbnailFile = {
-                filename: 'logo.png',
-                path: '/images/logo.png',
-                mimetype: 'image/png',
-                size: 0
-            };
-        }
-
-        const study = await studyDao.createStudy(studyData, thumbnailFile);
-
-        logger.info('(studyService.createStudyHandler) 스터디 생성 완료', {
-            studyId: study.id,
-            userId: req.user.id,
-            cityId: studyData.city_id,
-            districtId: studyData.district_id,
-            townId: studyData.town_id,
-            hasThumbnail: !!req.file,
-            isDefaultImage: !req.file,
-            timestamp: new Date().toISOString()
-        });
-
-        res.status(201).json({
-            success: true,
-            message: '스터디가 생성되었습니다.',
-            data: study
-        });
-    } catch (err) {
-        logger.error('(studyService.createStudyHandler) 스터디 생성 실패', {
-            error: err.toString(),
-            userId: req.user?.id,
-            timestamp: new Date().toISOString()
-        });
-        res.status(500).json({ success: false, message: '스터디 생성 중 오류가 발생했습니다.' });
-    }
-}
 
 export default studyService; 

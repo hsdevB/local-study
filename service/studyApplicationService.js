@@ -346,8 +346,15 @@ class StudyApplicationService {
   async getMyCreatedStudiesHandler(req, res) {
     try {
       const userId = req.user.id;
-      // Study 테이블에서 user_id가 본인인 스터디 목록 조회
-      const studies = await studyDao.findStudies({ user_id: userId });
+      // Study 테이블에서 user_id가 본인인 스터디 목록 조회 (참가자 정보 포함)
+      const studies = await studyDao.findStudiesByUserId(userId);
+      
+      logger.info('(studyApplicationService.getMyCreatedStudiesHandler) 내가 만든 스터디 목록 조회 완료', {
+        userId,
+        count: studies.length,
+        timestamp: new Date().toISOString()
+      });
+
       res.status(200).json({
         success: true,
         data: studies

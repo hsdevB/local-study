@@ -495,10 +495,53 @@ const studyDao = {
                     {
                         model: User,
                         as: 'User',
-                        attributes: ['nickname']
+                        attributes: ['id', 'userId', 'nickname']
+                    },
+                    {
+                        model: StudyApplication,
+                        as: 'StudyApplications',
+                        include: [{
+                            model: User,
+                            as: 'User',
+                            attributes: ['id', 'userId', 'nickname']
+                        }]
                     }
                 ],
                 order: [['created_at', 'DESC']]
+            });
+
+            // 참여자 정보 가공
+            const studiesWithParticipants = studies.map(study => {
+                const studyJson = study.toJSON();
+                const participants = studyJson.StudyApplications
+                    .filter(app => app.status === 'approved' || app.status === 'pending')
+                    .map(app => ({
+                        id: app.User.id,
+                        userId: app.User.userId,
+                        nickname: app.User.nickname,
+                        status: app.status,
+                        isAuthor: false
+                    }));
+
+                // 작성자 정보 추가
+                participants.unshift({
+                    id: studyJson.User.id,
+                    userId: studyJson.User.userId,
+                    nickname: studyJson.User.nickname,
+                    isAuthor: true
+                });
+
+                // 현재 참여자 수 계산
+                const currentParticipants = participants.filter(p => 
+                    (p.status === 'approved' || p.isAuthor) && p.status !== 'kicked'
+                ).length;
+
+                return {
+                    ...studyJson,
+                    current_participants: currentParticipants,
+                    participants: participants,
+                    StudyApplications: undefined // 불필요한 필드 제거
+                };
             });
 
             logger.info('(studyDao.findStudiesByUserId) 내가 만든 스터디 조회 완료', {
@@ -507,7 +550,7 @@ const studyDao = {
                 timestamp: new Date().toISOString()
             });
 
-            return studies;
+            return studiesWithParticipants;
         } catch (error) {
             logger.error('(studyDao.findStudiesByUserId) 내가 만든 스터디 조회 실패', {
                 error: error.toString(),
