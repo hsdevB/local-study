@@ -18,7 +18,7 @@ studyRouter.get('/my', verifyToken, studyService.getMyStudiesHandler.bind(studyS
 studyRouter.get('/:id', studyService.getStudyByIdHandler.bind(studyService));
 
 // 스터디 수정 (인증 필요)
-studyRouter.put('/:id', verifyToken, studyService.updateStudyHandler.bind(studyService));
+studyRouter.put('/:id', verifyToken, upload.single('thumbnail'), handleUploadError, studyService.updateStudyHandler.bind(studyService));
 
 // 스터디 삭제 (인증 필요)
 studyRouter.delete('/:id', verifyToken, studyService.deleteStudyHandler.bind(studyService));

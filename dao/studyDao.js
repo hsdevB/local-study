@@ -183,43 +183,114 @@ const studyDao = {
 
     updateStudy: async (study, updateData) => {
         try {
-            // 업데이트할 필드만 추출
-            const fieldsToUpdate = {
-                title: updateData.title,
-                description: updateData.description,
-                max_participants: updateData.max_participants,
-                start_date: updateData.start_date,
-                end_date: updateData.end_date,
-                city_id: updateData.city_id,
-                district_id: updateData.district_id,
-                town_id: updateData.town_id,
-                category_id: updateData.category_id
-            };
+            const fieldsToUpdate = [
+                'title', 'description', 'start_date', 'end_date',
+                'max_participants', 'city_id', 'district_id', 'town_id',
+                'category_id', 'status'
+            ];
 
-            // undefined나 null인 필드는 제외
-            Object.keys(fieldsToUpdate).forEach(key => {
-                if (fieldsToUpdate[key] === undefined || fieldsToUpdate[key] === null) {
-                    delete fieldsToUpdate[key];
+            const updateFields = {};
+            fieldsToUpdate.forEach(field => {
+                if (updateData[field] !== undefined && updateData[field] !== null) {
+                    updateFields[field] = updateData[field];
                 }
             });
 
-            const updatedStudy = await study.update(fieldsToUpdate);
-
-            logger.info('(studyDao.updateStudy) 스터디 수정 완료', {
-                studyId: study.id,
-                updatedFields: Object.keys(fieldsToUpdate),
-                timestamp: new Date().toISOString()
-            });
-
-            return updatedStudy;
+            await study.update(updateFields);
+            return study;
         } catch (err) {
-            logger.error('(studyDao.updateStudy) 스터디 수정 실패', {
+            logger.error('(studyDao.updateStudy) 스터디 업데이트 실패', {
                 error: err.toString(),
                 studyId: study.id,
-                updateData,
                 timestamp: new Date().toISOString()
             });
-            throw new AppError('스터디 수정 중 오류가 발생했습니다.', 500);
+            throw err;
+        }
+    },
+
+    updateStudyThumbnail: async (studyId, thumbnailData) => {
+        try {
+            const existingThumbnail = await StudyThumbnail.findOne({
+                where: { study_id: studyId }
+            });
+
+            if (!existingThumbnail) {
+                throw new AppError('썸네일을 찾을 수 없습니다.', 404);
+            }
+
+            // 필요한 필드만 업데이트
+            await existingThumbnail.update({
+                path: thumbnailData.path,
+                filename: thumbnailData.filename,
+                size: thumbnailData.size,
+                mimetype: thumbnailData.mimetype,
+                updatedAt: new Date()
+            });
+
+            logger.info('(studyDao.updateStudyThumbnail) 썸네일 업데이트 완료', {
+                studyId,
+                thumbnailPath: thumbnailData.path,
+                timestamp: new Date().toISOString()
+            });
+
+            return existingThumbnail;
+        } catch (err) {
+            logger.error('(studyDao.updateStudyThumbnail) 썸네일 업데이트 실패', {
+                error: err.toString(),
+                studyId,
+                timestamp: new Date().toISOString()
+            });
+            throw err;
+        }
+    },
+
+    createStudyThumbnail: async (studyId, thumbnailPath) => {
+        try {
+            const thumbnail = await StudyThumbnail.create({
+                study_id: studyId,
+                path: thumbnailPath,
+                filename: thumbnailPath.split('/').pop(),
+                size: 0, // 기본값 설정
+                mimetype: 'image/png' // 기본값 설정
+            });
+
+            logger.info('(studyDao.createStudyThumbnail) 썸네일 생성 완료', {
+                studyId,
+                thumbnailPath,
+                timestamp: new Date().toISOString()
+            });
+
+            return thumbnail;
+        } catch (err) {
+            logger.error('(studyDao.createStudyThumbnail) 썸네일 생성 실패', {
+                error: err.toString(),
+                studyId,
+                thumbnailPath,
+                timestamp: new Date().toISOString()
+            });
+            throw err;
+        }
+    },
+
+    deleteStudyThumbnails: async (studyId) => {
+        try {
+            await StudyThumbnail.destroy({
+                where: { study_id: studyId }
+            });
+
+            logger.info('(studyDao.deleteStudyThumbnails) 썸네일 삭제 완료', {
+                studyId,
+                timestamp: new Date().toISOString()
+            });
+
+            return true;
+        } catch (err) {
+            logger.error('(studyDao.deleteStudyThumbnails) 썸네일 삭제 실패', {
+                error: err.toString(),
+                studyId,
+                timestamp: new Date().toISOString()
+            });
+            throw err;
         }
     },
 
