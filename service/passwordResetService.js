@@ -60,7 +60,7 @@ const passwordResetService = {
       const result = await this.requestPasswordReset(userId, email);
       res.status(200).json({ success: true, data: result });
     } catch (err) {
-      res.status(500).json({ success: false, message: '비밀번호 재설정 요청 중 오류가 발생했습니다.' });
+      res.status(500).json({ success: false, message: '아이디와 이메일을 다시 확인해주세요.' });
     }
   }
 };
