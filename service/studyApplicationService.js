@@ -69,7 +69,9 @@ class StudyApplicationService {
     const application = await studyApplicationDao.getApplicationById(applicationId);
     if (!application) throw new Error('존재하지 않는 신청입니다.');
     if (application.user_id !== userId) throw new Error('본인만 신청을 취소할 수 있습니다.');
-    if (application.status !== 'pending') throw new Error('대기 상태만 취소할 수 있습니다.');
+    if (application.status === 'rejected' || application.status === 'kicked') {
+      throw new Error('이미 거절되거나 추방된 신청은 취소할 수 없습니다.');
+    }
     await studyApplicationDao.deleteApplication(applicationId, userId);
     return true;
   }
