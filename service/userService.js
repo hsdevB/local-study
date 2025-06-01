@@ -124,13 +124,29 @@ const userService = {
 
     async updateUserInfo(userId, updateData) {
         try {
+            logger.info('(userService.updateUserInfo) 회원정보 수정 시작', {
+                userId,
+                updateData,
+                timestamp: new Date().toISOString()
+            });
+
             // 1. 사용자 조회
             const user = await userDao.findByUserId(userId);
             if (!user) {
                 throw new AppError('사용자를 찾을 수 없습니다.', 404);
             }
 
-            // 2. 이메일 변경 시 중복 검사
+            // 2. 변경할 데이터가 있는지 확인
+            if (Object.keys(updateData).length === 0) {
+                logger.warn('(userService.updateUserInfo) 수정할 정보 없음', {
+                    userId,
+                    updateData,
+                    timestamp: new Date().toISOString()
+                });
+                throw new AppError('수정할 정보가 없습니다.', 400);
+            }
+
+            // 3. 이메일 변경 시 중복 검사
             if (updateData.email && updateData.email !== user.email) {
                 validationUtil.validateEmail(updateData.email);
                 const existingEmail = await userDao.findByEmail(updateData.email);
@@ -139,23 +155,20 @@ const userService = {
                 }
             }
 
-            // 3. 전화번호 형식 검사
-            if (updateData.phoneNumber) {
-                const phoneRegex = /^01([0|1|6|7|8|9])-?([0-9]{3,4})-?([0-9]{4})$/;
-                if (!phoneRegex.test(updateData.phoneNumber)) {
-                    throw new AppError('올바른 전화번호 형식이 아닙니다.', 400);
-                }
-            }
-
             // 4. 닉네임 중복 검사
-            if(updateData.nickname){
+            if (updateData.nickname && updateData.nickname !== user.nickname) {
                 const existingNickname = await signupDao.findByNickname(updateData.nickname);
-                if(existingNickname){
+                if (existingNickname) {
                     throw new AppError('이미 사용 중인 닉네임입니다.', 400);
                 }
             }
 
-            // 4. 사용자 정보 업데이트
+            // 5. 비밀번호 변경 시 해싱
+            if (updateData.password) {
+                updateData.password = await hashUtil.makePasswordHash(updateData.password);
+            }
+
+            // 6. 사용자 정보 업데이트
             const updatedUser = await userDao.updateUser(userId, updateData);
 
             logger.info('(userService.updateUserInfo) 회원정보 수정 완료', {
@@ -169,8 +182,6 @@ const userService = {
                 data: {
                     userId: updatedUser.userId,
                     email: updatedUser.email,
-                    username: updatedUser.username,
-                    phoneNumber: updatedUser.phoneNumber,
                     nickname: updatedUser.nickname
                 }
             };
@@ -312,14 +323,42 @@ const userService = {
         try {
             const userId = req.user.userId;
             const updateData = { ...req.body };
-            delete updateData.userId;
-            if (Object.keys(updateData).length === 0) {
-                return res.status(400).json({ success: false, message: '수정할 정보가 없습니다.' });
+            
+            // userId가 변경되는 경우를 처리
+            if (updateData.userId && updateData.userId !== userId) {
+                // userId 중복 검사
+                const existingUser = await userDao.findByUserId(updateData.userId);
+                if (existingUser) {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: '이미 사용 중인 아이디입니다.' 
+                    });
+                }
             }
+
+            if (Object.keys(updateData).length === 0) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: '수정할 정보가 없습니다.' 
+                });
+            }
+
             const result = await this.updateUserInfo(userId, updateData);
-            res.status(200).json({ success: true, message: result.message, data: result.data });
+            res.status(200).json({ 
+                success: true, 
+                message: result.message, 
+                data: result.data 
+            });
         } catch (err) {
-            res.status(500).json({ success: false, message: '회원정보 수정 중 오류가 발생했습니다.' });
+            logger.error('(userService.updateUserInfoHandler) 회원정보 수정 실패', {
+                error: err.toString(),
+                userId: req.user.userId,
+                updateData: req.body
+            });
+            res.status(err.status || 500).json({ 
+                success: false, 
+                message: err.message || '회원정보 수정 중 오류가 발생했습니다.' 
+            });
         }
     },
     async withdrawUserHandler(req, res) {

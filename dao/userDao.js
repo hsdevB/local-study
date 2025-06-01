@@ -93,22 +93,28 @@ const userDao = {
 
     updateUser: async(userId, updateData) => {
         try {
+            // userId가 변경되는 경우를 위해 현재 userId로 사용자를 찾음
+            const currentUserId = userId;
+            
             const [updatedCount] = await User.update(
                 updateData,
-                { where: { userId } }
+                { where: { userId: currentUserId } }
             );
 
             if (updatedCount === 0) {
                 throw new AppError('회원정보 업데이트에 실패했습니다.', 500);
             }
 
+            // 업데이트된 사용자 정보를 조회할 때는 새로운 userId를 사용
+            const updatedUserId = updateData.userId || currentUserId;
             const updatedUser = await User.findOne({
-                where: { userId },
+                where: { userId: updatedUserId },
                 attributes: ['userId', 'email', 'nickname', 'phoneNumber', 'birthDate', 'gender']
             });
 
             logger.info('(userDao.updateUser) 회원정보 수정 완료', {
-                userId,
+                currentUserId,
+                updatedUserId,
                 updatedFields: Object.keys(updateData),
                 timestamp: new Date().toISOString()
             });
