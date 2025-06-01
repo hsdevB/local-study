@@ -26,6 +26,7 @@ class StudyApplicationDao {
       include: [{
         model: Study,
         as: 'Study',
+        where: { deleted_at: null },  // 삭제되지 않은 스터디만 조회
         attributes: ['id', 'title', 'description', 'start_date', 'end_date', 'max_participants', 'current_participants'],
         include: [
           { model: Category, as: 'Category', attributes: ['id', 'name'] },
