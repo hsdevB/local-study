@@ -461,7 +461,10 @@ const studyDao = {
             });
 
             const studies = await Study.findAll({
-                where: { user_id: userId },
+                where: { 
+                    user_id: userId,
+                    deleted_at: null  // 삭제되지 않은 스터디만 조회
+                },
                 attributes: [
                     'id', 'title', 'description', 'max_participants',
                     'start_date', 'end_date', 'created_at', 'updated_at'
