@@ -6,18 +6,42 @@
  *       type: object
  *       required:
  *         - userId
+ *         - password
  *         - nickname
  *         - email
+ *         - phoneNumber
+ *         - birthDate
+ *         - gender
  *       properties:
  *         userId:
  *           type: string
- *           description: 사용자 아이디
+ *           description: 사용자 아이디 (3자 이상, 영문/숫자만 허용)
+ *           minLength: 3
+ *           pattern: '^[a-zA-Z0-9]+$'
+ *         password:
+ *           type: string
+ *           description: 비밀번호 (8자 이상, 영문/숫자/특수문자 포함)
+ *           minLength: 8
+ *           pattern: '^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$'
  *         nickname:
  *           type: string
  *           description: 사용자 닉네임
  *         email:
  *           type: string
  *           description: 사용자 이메일
+ *           format: email
+ *         phoneNumber:
+ *           type: string
+ *           description: 전화번호 (010-XXXX-XXXX 형식)
+ *           pattern: '^01([0|1|6|7|8|9])-?([0-9]{3,4})-?([0-9]{4})$'
+ *         birthDate:
+ *           type: string
+ *           description: 생년월일
+ *           format: date
+ *         gender:
+ *           type: string
+ *           description: 성별
+ *           enum: [M, F]
  *     Study:
  *       type: object
  *       required:
@@ -27,6 +51,7 @@
  *         - cityId
  *         - districtId
  *         - townId
+ *         - maxParticipants
  *       properties:
  *         id:
  *           type: integer
@@ -52,6 +77,7 @@
  *         maxParticipants:
  *           type: integer
  *           description: 최대 참가자 수
+ *           minimum: 1
  *         currentParticipants:
  *           type: integer
  *           description: 현재 참가자 수
@@ -244,16 +270,30 @@
  *             properties:
  *               userId:
  *                 type: string
+ *                 description: 사용자 아이디 (3자 이상, 영문/숫자만 허용)
+ *                 minLength: 3
+ *                 pattern: '^[a-zA-Z0-9]+$'
  *                 example: "newUserId"
  *               nickname:
  *                 type: string
+ *                 description: 사용자 닉네임
  *                 example: "newNickname"
  *               email:
  *                 type: string
+ *                 format: email
+ *                 description: 사용자 이메일
  *                 example: "new@email.com"
+ *               phoneNumber:
+ *                 type: string
+ *                 description: 전화번호 (010-XXXX-XXXX 형식)
+ *                 pattern: '^01([0|1|6|7|8|9])-?([0-9]{3,4})-?([0-9]{4})$'
+ *                 example: "010-1234-5678"
  *               password:
  *                 type: string
- *                 example: "newPassword123"
+ *                 description: 새 비밀번호 (8자 이상, 영문/숫자/특수문자 포함)
+ *                 minLength: 8
+ *                 pattern: '^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$'
+ *                 example: "NewPassword123!"
  *     responses:
  *       200:
  *         description: 정보 수정 성공
@@ -265,6 +305,9 @@
  *                 success:
  *                   type: boolean
  *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "회원정보가 성공적으로 수정되었습니다."
  *                 data:
  *                   $ref: '#/components/schemas/User'
  *       400:
@@ -301,10 +344,14 @@
  *             properties:
  *               currentPassword:
  *                 type: string
+ *                 description: 현재 비밀번호
  *                 example: "currentPassword123"
  *               newPassword:
  *                 type: string
- *                 example: "newPassword123"
+ *                 description: 새 비밀번호 (8자 이상, 영문/숫자/특수문자 포함)
+ *                 minLength: 8
+ *                 pattern: '^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$'
+ *                 example: "NewPassword123!"
  *     responses:
  *       200:
  *         description: 비밀번호 변경 성공
@@ -331,6 +378,12 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: 사용자를 찾을 수 없음
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 
 /**
@@ -341,6 +394,24 @@
  *     tags: [User]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - password
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: 사용자 아이디
+ *                 example: "user123"
+ *               password:
+ *                 type: string
+ *                 description: 현재 비밀번호
+ *                 example: "currentPassword123"
  *     responses:
  *       200:
  *         description: 회원 탈퇴 성공
@@ -355,8 +426,20 @@
  *                 message:
  *                   type: string
  *                   example: "회원 탈퇴가 완료되었습니다."
+ *       400:
+ *         description: 잘못된 요청
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: 인증되지 않은 요청
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: 사용자를 찾을 수 없음
  *         content:
  *           application/json:
  *             schema:
@@ -462,19 +545,46 @@
  *               - password
  *               - nickname
  *               - email
+ *               - phoneNumber
+ *               - birthDate
+ *               - gender
  *             properties:
  *               userId:
  *                 type: string
+ *                 description: 사용자 아이디 (3자 이상, 영문/숫자만 허용)
+ *                 minLength: 3
+ *                 pattern: '^[a-zA-Z0-9]+$'
  *                 example: "user123"
  *               password:
  *                 type: string
- *                 example: "password123"
+ *                 description: 비밀번호 (8자 이상, 영문/숫자/특수문자 포함)
+ *                 minLength: 8
+ *                 pattern: '^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$'
+ *                 example: "Password123!"
  *               nickname:
  *                 type: string
+ *                 description: 사용자 닉네임
  *                 example: "닉네임"
  *               email:
  *                 type: string
+ *                 format: email
+ *                 description: 사용자 이메일
  *                 example: "user@example.com"
+ *               phoneNumber:
+ *                 type: string
+ *                 description: 전화번호 (010-XXXX-XXXX 형식)
+ *                 pattern: '^01([0|1|6|7|8|9])-?([0-9]{3,4})-?([0-9]{4})$'
+ *                 example: "010-1234-5678"
+ *               birthDate:
+ *                 type: string
+ *                 format: date
+ *                 description: 생년월일
+ *                 example: "1990-01-01"
+ *               gender:
+ *                 type: string
+ *                 enum: [M, F]
+ *                 description: 성별
+ *                 example: "M"
  *     responses:
  *       201:
  *         description: 회원가입 성공
@@ -489,6 +599,15 @@
  *                 message:
  *                   type: string
  *                   example: "회원가입이 완료되었습니다."
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     nickname:
+ *                       type: string
  *       400:
  *         description: 잘못된 요청
  *         content:
@@ -510,10 +629,17 @@
  *           schema:
  *             type: object
  *             required:
+ *               - userId
  *               - email
  *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: 사용자 아이디
+ *                 example: "user123"
  *               email:
  *                 type: string
+ *                 format: email
+ *                 description: 사용자 이메일
  *                 example: "user@example.com"
  *     responses:
  *       200:
@@ -526,11 +652,20 @@
  *                 success:
  *                   type: boolean
  *                   example: true
- *                 message:
- *                   type: string
- *                   example: "비밀번호 재설정 이메일이 발송되었습니다."
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     message:
+ *                       type: string
+ *                       example: "임시 비밀번호가 이메일로 발송되었습니다."
  *       400:
  *         description: 잘못된 요청
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: 사용자를 찾을 수 없음
  *         content:
  *           application/json:
  *             schema:
@@ -594,7 +729,44 @@
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Study'
+ *             type: object
+ *             required:
+ *               - title
+ *               - description
+ *               - categoryId
+ *               - cityId
+ *               - districtId
+ *               - townId
+ *               - maxParticipants
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 description: 스터디 제목
+ *                 example: "프로그래밍 스터디"
+ *               description:
+ *                 type: string
+ *                 description: 스터디 설명
+ *                 example: "주 2회 모여서 프로그래밍 공부를 합니다."
+ *               categoryId:
+ *                 type: integer
+ *                 description: 카테고리 ID
+ *                 example: 1
+ *               cityId:
+ *                 type: integer
+ *                 description: 도시 ID
+ *                 example: 1
+ *               districtId:
+ *                 type: integer
+ *                 description: 구/군 ID
+ *                 example: 1
+ *               townId:
+ *                 type: integer
+ *                 description: 동/읍/면 ID
+ *                 example: 1
+ *               maxParticipants:
+ *                 type: integer
+ *                 description: 최대 참가자 수
+ *                 minimum: 1
  *     responses:
  *       201:
  *         description: 스터디 생성 성공
@@ -772,6 +944,132 @@
  *                   example: "스터디 참여 신청이 취소되었습니다."
  *       401:
  *         description: 인증되지 않은 요청
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: 신청을 찾을 수 없음
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /study-application/{id}/status:
+ *   put:
+ *     summary: 스터디 참가 신청 상태 업데이트
+ *     tags: [StudyApplication]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: 신청 ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [approved, rejected]
+ *                 description: 신청 상태
+ *                 example: "approved"
+ *     responses:
+ *       200:
+ *         description: 신청 상태 업데이트 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "참가 신청이 수락되었습니다."
+ *                 data:
+ *                   $ref: '#/components/schemas/StudyApplication'
+ *       400:
+ *         description: 잘못된 요청
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: 인증되지 않은 요청
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: 권한 없음
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: 신청을 찾을 수 없음
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+/**
+ * @swagger
+ * /study-application/{id}/cancel:
+ *   delete:
+ *     summary: 스터디 참가 신청 취소
+ *     tags: [StudyApplication]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: 신청 ID
+ *     responses:
+ *       200:
+ *         description: 신청 취소 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "신청이 취소되었습니다."
+ *       400:
+ *         description: 잘못된 요청
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: 인증되지 않은 요청
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: 권한 없음
  *         content:
  *           application/json:
  *             schema:
