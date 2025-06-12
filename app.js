@@ -10,6 +10,8 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { errorHandler } from './utils/errorHandler.js';
 import cookieParser from 'cookie-parser';
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpecs from './config/swagger.js';
 
 import indexRouter from './routes/index.js';
 
@@ -101,6 +103,9 @@ app.use('/images', (req, res, next) => {
 
 // 라우터 설정
 app.use('/', indexRouter);
+
+// Swagger UI 설정
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 // 데이터베이스 연결 및 마이그레이션 실행
 models.sequelize.authenticate()
